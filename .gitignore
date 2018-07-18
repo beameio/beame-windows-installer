@@ -1,0 +1,13 @@
+
+*.dll
+*.pdb
+*.cache
+*.nupkg
+*.ps1
+*.manifest
+*.user
+.vs
+*/bin
+*/obj
+packages
+.DS_store
