@@ -162,6 +162,8 @@ namespace BeameWindowsInstaller
                     WriteResourceToFile(nodeInstaller, msiPath);
                     result = StartAndCheckReturn("msiexec", "/i " + msiPath);
                     Console.WriteLine("NodeJS installation " + (result ? "suceeded" : "failed"));
+
+                    // TODO: when node installed it seems that a relogin is required before proceeding in order to reload the environment -- find a way to handle this
                 }
 
                 if (result)
