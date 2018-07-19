@@ -32,6 +32,8 @@ namespace BeameWindowsInstaller
             WindowsPrincipal principal = new WindowsPrincipal(identity);
             if (principal.IsInRole(WindowsBuiltInRole.Administrator))
             {
+                Console.WriteLine("Using Programs file folder: " + progFolder);
+                Console.WriteLine();
                 foreach (InstallerOptions option in Enum.GetValues(typeof(InstallerOptions)))
                 {
                     Console.WriteLine(String.Format("{0}. {1}", (int)option, option));
@@ -207,7 +209,7 @@ namespace BeameWindowsInstaller
                 {
                     Directory.CreateDirectory(openSSLPath);
                 }
-
+                
                 string openSSLFile = Path.Combine(openSSLPath, "bin/openssl.exe");
                 if (File.Exists(openSSLFile))
                 {
@@ -215,8 +217,11 @@ namespace BeameWindowsInstaller
                 }
                 else
                 {
+                    string tmpPath = Path.Combine(Path.GetTempPath(), openSSLInstaller);
+                    WriteResourceToFile(openSSLInstaller, tmpPath);
+
                     Console.WriteLine("extracting files...");
-                    ZipFile.ExtractToDirectory(openSSLInstaller, "c:/");
+                    ZipFile.ExtractToDirectory(tmpPath, "c:/");
                     Environment.SetEnvironmentVariable("OPENSSL_CONF", Path.Combine(openSSLPath, "ssl/openssl.cnf"), EnvironmentVariableTarget.Machine);
                 }
 

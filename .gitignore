@@ -7,7 +7,7 @@
 *.manifest
 *.user
 .vs
-*/bin
-*/obj
+bin
+obj
 packages
 .DS_store
