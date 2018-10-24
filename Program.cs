@@ -13,19 +13,28 @@ namespace BeameWindowsInstaller
         const string openSSLPath = "C:\\OpenSSL-Win64";
         const string openSSLInstaller = "OpenSSL-Win64.zip";
         const string gitInstaller = "Git-2.11.0-64-bit.exe";
-        const string nodeInstaller = "node-v8.9.3-x64.msi";
+        const string nodeInstaller = "node-v8.12.0-x64.msi";
+
+        const string customGatekeeper = "";
+        const string customGatekeeperCSS = "";
+
         static string progFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
 
         enum InstallerOptions
         {
+            Dependencies = 0,
             Gatekeeper = 1,
-            BeameSDK = 2,
+            CustomGatekeeper=2,
+            BeameSDK = 5,
             Exit = 9
         }
 
         static void Main(string[] args)
         {
+            Console.WriteLine("**************************");
             Console.WriteLine("Beame.io Windows Installer");
+            Console.WriteLine("**************************");
+            Console.WriteLine("Note: install dependencies before any other software");
             Console.WriteLine();
 
             WindowsIdentity identity = WindowsIdentity.GetCurrent();
@@ -43,16 +52,40 @@ namespace BeameWindowsInstaller
                 string selected = Console.ReadLine();
                 Int32.TryParse(selected, out int opt);
 
-                if (opt != (int)InstallerOptions.Gatekeeper && opt != (int)InstallerOptions.BeameSDK)
+                if(opt == (int)InstallerOptions.Exit)
                     Environment.Exit(0);
 
-                if (!InstallGit() || !InstallNode() || !InstallOpenSSL())
+                /*if (!InstallGit() || !InstallNode() || !InstallOpenSSL())
                 {
                     Console.ReadLine();
                     Environment.Exit(Environment.ExitCode);
+                }*/
+
+                bool installed = false;
+                switch(opt)
+                {
+                    case (int)InstallerOptions.Dependencies:
+                        installed = InstallGit() && InstallNode() && InstallOpenSSL();
+                        break;
+
+                    case (int)InstallerOptions.Gatekeeper:
+                        installed = InstallBeameGateKeeper();
+                        break;
+
+                    case (int)InstallerOptions.CustomGatekeeper:
+                        installed = InstallCustomGateKeeper();
+                        break;
+
+                    case (int)InstallerOptions.BeameSDK:
+                        installed = InstallBeameSDK();
+                        break;
+
+                    default:
+                        Console.WriteLine("Option not valid, exiting.");
+                        Environment.Exit(0);
+                        break;
                 }
 
-                bool installed = opt == (int)InstallerOptions.Gatekeeper ? InstallBeameGateKeeper() : InstallBeameSDK();
                 Console.WriteLine();
                 if (installed)
                 {
@@ -98,6 +131,28 @@ namespace BeameWindowsInstaller
 
             return result;
         }
+
+        private static bool InstallCustomGateKeeper()
+        {
+            bool result = false;
+            Console.WriteLine("Installing Beame.io Gatekeeper...");
+
+            string nodeJSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs");
+            string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
+            try
+            {
+                //add GIT to path before starting this installation, in case GIT was just recently installed
+                result = StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, "C:\\Program Files\\Git\\cmd");
+                Console.WriteLine("Beame.io Gatekeeper installation " + (result ? "suceeded" : "failed"));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
+            }
+
+            return result;
+        }
+
 
         private static bool InstallBeameSDK()
         {
