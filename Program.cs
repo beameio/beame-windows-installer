@@ -3,85 +3,93 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
+using System.Configuration;
 using System.Security.Principal;
-
 
 namespace BeameWindowsInstaller
 {
-    class Program
+    static class Program
     {
         const string openSSLPath = "C:\\OpenSSL-Win64";
         const string openSSLInstaller = "OpenSSL-Win64.zip";
         const string gitInstaller = "Git-2.11.0-64-bit.exe";
         const string nodeInstaller = "node-v8.12.0-x64.msi";
 
-        const string customGatekeeper = "";
-        const string customGatekeeperCSS = "";
+        static readonly string proxyAddressProtocol = ConfigurationManager.AppSettings["ProxyAddressProtocol"];
+        static readonly string proxyAddressAddress = ConfigurationManager.AppSettings["ProxyAddressAddress"];
+        static readonly string proxyAddressPort = ConfigurationManager.AppSettings["ProxyAddressPort"];
+        static readonly string proxyAddressExcludes = ConfigurationManager.AppSettings["ProxyAddressExcludes"];
+        static readonly string proxyAddress = string.IsNullOrWhiteSpace(proxyAddressProtocol) ? "" : proxyAddressProtocol + "://" +  proxyAddressAddress + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort);
+
+        static readonly string customGatekeeper = ConfigurationManager.AppSettings["CustomGatekeeper"];
+        static readonly string customGatekeeperCSS = ConfigurationManager.AppSettings["CustomGatekeeperCSS"];
+        static readonly string gatekeeperInstallationPath = ConfigurationManager.AppSettings["GatekeeperInstallationPath"];
 
         static string progFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
 
         enum InstallerOptions
         {
-            Dependencies = 0,
             Gatekeeper = 1,
-            CustomGatekeeper=2,
-            BeameSDK = 5,
+            BeameSDK = 2,
+            Dependencies = 7,
             Exit = 9
         }
 
         static void Main(string[] args)
         {
-            Console.WriteLine("**************************");
             Console.WriteLine("Beame.io Windows Installer");
             Console.WriteLine("**************************");
             Console.WriteLine("Note: install dependencies before any other software");
             Console.WriteLine();
 
+
+
+            // TODO
+            //   Confirm dependencies install in one go
+            //   Make dependencies installation silent
+
+
             WindowsIdentity identity = WindowsIdentity.GetCurrent();
             WindowsPrincipal principal = new WindowsPrincipal(identity);
             if (principal.IsInRole(WindowsBuiltInRole.Administrator))
             {
-                Console.WriteLine("Using Programs file folder: " + progFolder);
-                Console.WriteLine();
-                foreach (InstallerOptions option in Enum.GetValues(typeof(InstallerOptions)))
+                string selected;
+                if (args.Length > 1)
                 {
-                    Console.WriteLine(String.Format("{0}. {1}", (int)option, option));
+                    selected = args[1];
                 }
-                Console.WriteLine("");
-                Console.WriteLine("Please enter option:");
-                string selected = Console.ReadLine();
-                Int32.TryParse(selected, out int opt);
-
-                if(opt == (int)InstallerOptions.Exit)
-                    Environment.Exit(0);
-
-                /*if (!InstallGit() || !InstallNode() || !InstallOpenSSL())
+                else
                 {
-                    Console.ReadLine();
-                    Environment.Exit(Environment.ExitCode);
-                }*/
+                    Console.WriteLine("Using Programs file folder: " + progFolder);
+                    Console.WriteLine();
+                    foreach (InstallerOptions option in Enum.GetValues(typeof(InstallerOptions)))
+                    {
+                        Console.WriteLine(String.Format("{0}. {1}", (int)option, option));
+                    }
+                    Console.WriteLine("");
+                    Console.WriteLine("Please enter option:");
+                    selected = Console.ReadLine();
+                }
 
+                InstallerOptions opt;
+                Enum.TryParse(selected, out opt);
                 bool installed = false;
                 switch(opt)
                 {
-                    case (int)InstallerOptions.Dependencies:
-                        installed = InstallGit() && InstallNode() && InstallOpenSSL();
-                        break;
-
-                    case (int)InstallerOptions.Gatekeeper:
+                    case InstallerOptions.Gatekeeper:
+                        InstallDeps();
                         installed = InstallBeameGateKeeper();
                         break;
 
-                    case (int)InstallerOptions.CustomGatekeeper:
-                        installed = InstallCustomGateKeeper();
-                        break;
-
-                    case (int)InstallerOptions.BeameSDK:
+                    case InstallerOptions.BeameSDK:
+                        InstallDeps();
                         installed = InstallBeameSDK();
                         break;
 
+                    case InstallerOptions.Dependencies:
+                        InstallDeps();
+                        break;
                     default:
-                        Console.WriteLine("Option not valid, exiting.");
                         Environment.Exit(0);
                         break;
                 }
@@ -91,7 +99,7 @@ namespace BeameWindowsInstaller
                 {
                     Console.WriteLine("Installer finished successfully");
                     Console.WriteLine();
-                    Process.Start(opt == (int)InstallerOptions.Gatekeeper ? "https://ypxf72akb6onjvrq.ohkv8odznwh5jpwm.v1.p.beameio.net/gatekeeper" : "https://ypxf72akb6onjvrq.ohkv8odznwh5jpwm.v1.p.beameio.net/");
+                    Process.Start(opt == InstallerOptions.Gatekeeper ? "https://ypxf72akb6onjvrq.ohkv8odznwh5jpwm.v1.p.beameio.net/gatekeeper" : "https://ypxf72akb6onjvrq.ohkv8odznwh5jpwm.v1.p.beameio.net/");
                     Console.WriteLine("Please fill the administrator name and email in the registration form.");
                     Console.WriteLine("After receiving the instruction email please follow only the last section (\"For Windows...\")");
                     Console.ReadLine();
@@ -111,45 +119,46 @@ namespace BeameWindowsInstaller
             }
         }
 
+
+
+
+
         private static bool InstallBeameGateKeeper()
         {
             bool result = false;
-            Console.WriteLine("Installing Beame.io Gatekeeper...");
 
-            string nodeJSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs");
-            string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
-            try
+            if (String.IsNullOrWhiteSpace(customGatekeeper))
             {
-                //add GIT to path before starting this installation, in case GIT was just recently installed
-                result = StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, "C:\\Program Files\\Git\\cmd");
-                Console.WriteLine("Beame.io Gatekeeper installation " + (result ? "suceeded" : "failed"));
+                Console.WriteLine("--> Installing Beame.io Gatekeeper from npm master");
+                string nodeJSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs");
+                string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
+                try
+                {
+                    //add GIT to path before starting this installation, in case GIT was just recently installed
+                    result = StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, "C:\\Program Files\\Git\\cmd");
+                    Console.WriteLine("Beame.io Gatekeeper installation " + (result ? "suceeded" : "failed"));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
+                }
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
-            }
+                Console.WriteLine("--> Installing custom Beame.io Gatekeeper from " + customGatekeeper);
+                // TODO
 
-            return result;
-        }
-
-        private static bool InstallCustomGateKeeper()
-        {
-            bool result = false;
-            Console.WriteLine("Installing Beame.io Gatekeeper...");
-
-            string nodeJSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs");
-            string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
-            try
-            {
-                //add GIT to path before starting this installation, in case GIT was just recently installed
-                result = StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, "C:\\Program Files\\Git\\cmd");
-                Console.WriteLine("Beame.io Gatekeeper installation " + (result ? "suceeded" : "failed"));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
             }
 
+
+            if(!String.IsNullOrWhiteSpace(customGatekeeperCSS))
+            {
+                Console.WriteLine("--> Adding custom css to Beame.io Gatekeeper");
+                // TODO
+
+            }
+
+            AddProxySettingsToBeame();
             return result;
         }
 
@@ -172,9 +181,36 @@ namespace BeameWindowsInstaller
                 Console.WriteLine("Beame.io SDK installation failed - {0}", ex.Message);
             }
 
+            AddProxySettingsToBeame();
             return result;
         }
 
+        private static void AddProxySettingsToBeame()
+        {
+            // set git proxy
+            if (!String.IsNullOrWhiteSpace(proxyAddress))
+            {
+                // TODO 
+                // add to ~/.beame_server/config/app_config.json   
+                //   "ProxySettings": {
+                //       "host": "descproxy01.brainlab.net",
+                //         "port": 8080,
+                //         "excludes": "127.0.0.1,localhost"
+                //   },
+                //  "ExternalOcspServerFqdn": "iep9bs1p7cj3cmit.tl5h1ipgobrdqsj6.v1.p.beameio.net“,
+
+
+                // add HTTP_PROXY, HTTPS_PROXY, FTP_PROXY
+            }
+        }
+
+        private static void InstallDeps() {
+            if (!InstallGit() || !InstallNode() || !InstallOpenSSL())
+            {
+                Console.ReadLine();
+                Environment.Exit(Environment.ExitCode);
+            }
+        }
         private static bool InstallGit()
         {
             Console.WriteLine("Installing Git...");
@@ -193,6 +229,14 @@ namespace BeameWindowsInstaller
             else
             {
                 Console.WriteLine("Git already installed");
+            }
+
+            // set git proxy
+            if (!String.IsNullOrWhiteSpace(proxyAddress))
+            {
+                string gitcmd = Path.Combine(gitPath, "git-cmd.exe");
+                StartAndCheckReturn(gitcmd, "config --global http.proxy " + proxyAddress);
+                StartAndCheckReturn(gitcmd, "config --global https.proxy " + proxyAddress);
             }
             return result;
         }
@@ -223,11 +267,19 @@ namespace BeameWindowsInstaller
 
                 if (result)
                 {
-                    //run NPM upgrade
                     Console.WriteLine("Updating npm packages");
                     string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
-                    result = StartAndCheckReturn(npmPath, "install -g --production windows-build-tools");
+
+                    // set npm proxy
+                    if (!String.IsNullOrWhiteSpace(proxyAddress))
+                    {
+                        StartAndCheckReturn(npmPath, "config set proxy " + proxyAddress);
+                        StartAndCheckReturn(npmPath, "config set https-proxy " + proxyAddress);
+                    }
+
+                    //run NPM upgrade
                     result = StartAndCheckReturn(npmPath, "install -g npm@latest");
+                    result = StartAndCheckReturn(npmPath, "install -g --production windows-build-tools");
                 }
             }
             catch (Exception ex)

@@ -11,3 +11,5 @@ bin
 obj
 packages
 .DS_store
+.idea
+
