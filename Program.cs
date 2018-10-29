@@ -10,23 +10,26 @@ namespace BeameWindowsInstaller
 {
     static class Program
     {
-        const string openSSLPath = "C:\\OpenSSL-Win64";
         const string openSSLInstaller = "OpenSSL-Win64.zip";
         const string gitInstaller = "Git-2.11.0-64-bit.exe";
         const string nodeInstaller = "node-v8.12.0-x64.msi";
 
+        static readonly string openSSLPath = ConfigurationManager.AppSettings["OpenSSLPath"];
         static readonly string proxyAddressProtocol = ConfigurationManager.AppSettings["ProxyAddressProtocol"];
-        static readonly string proxyAddressAddress = ConfigurationManager.AppSettings["ProxyAddressAddress"];
+        static readonly string proxyAddressFqdn = ConfigurationManager.AppSettings["ProxyAddressAddress"];
         static readonly string proxyAddressPort = ConfigurationManager.AppSettings["ProxyAddressPort"];
         static readonly string proxyAddressExcludes = ConfigurationManager.AppSettings["ProxyAddressExcludes"];
-        static readonly string proxyAddress = string.IsNullOrWhiteSpace(proxyAddressProtocol) ? "" : proxyAddressProtocol + "://" +  proxyAddressAddress + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort);
+        static readonly string proxyAddress = string.IsNullOrWhiteSpace(proxyAddressFqdn) 
+                ? "" 
+                : proxyAddressProtocol + "://" +  proxyAddressFqdn + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort);
 
         static readonly string customGatekeeper = ConfigurationManager.AppSettings["CustomGatekeeper"];
         static readonly string customGatekeeperCSS = ConfigurationManager.AppSettings["CustomGatekeeperCSS"];
         static readonly string gatekeeperInstallationPath = ConfigurationManager.AppSettings["GatekeeperInstallationPath"];
 
         static string progFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-
+        static string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        
         enum InstallerOptions
         {
             Gatekeeper = 1,
@@ -35,6 +38,11 @@ namespace BeameWindowsInstaller
             Exit = 9
         }
 
+        public static void SetEnv(string name, string value) 
+        {
+            Environment.SetEnvironmentVariable(name, value, EnvironmentVariableTarget.Machine);
+        }
+        
         static void Main(string[] args)
         {
             Console.WriteLine("Beame.io Windows Installer");
@@ -43,10 +51,10 @@ namespace BeameWindowsInstaller
             Console.WriteLine();
 
 
-
             // TODO
             //   Confirm dependencies install in one go
             //   Make dependencies installation silent
+            //   Install as service in windows
 
 
             WindowsIdentity identity = WindowsIdentity.GetCurrent();
@@ -85,7 +93,7 @@ namespace BeameWindowsInstaller
                         InstallDeps();
                         installed = InstallBeameSDK();
                         break;
-
+                    
                     case InstallerOptions.Dependencies:
                         InstallDeps();
                         break;
@@ -120,30 +128,31 @@ namespace BeameWindowsInstaller
         }
 
 
-
-
-
         private static bool InstallBeameGateKeeper()
         {
             bool result = false;
 
-            if (String.IsNullOrWhiteSpace(customGatekeeper))
+            if (!string.IsNullOrWhiteSpace(gatekeeperInstallationPath))
             {
-                Console.WriteLine("--> Installing Beame.io Gatekeeper from npm master");
-                string nodeJSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs");
-                string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
-                try
-                {
-                    //add GIT to path before starting this installation, in case GIT was just recently installed
-                    result = StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, "C:\\Program Files\\Git\\cmd");
-                    Console.WriteLine("Beame.io Gatekeeper installation " + (result ? "suceeded" : "failed"));
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
-                }
+                Console.WriteLine("--> Setting gatekeeper base dir to " + gatekeeperInstallationPath);
+                SetEnv("BEAME_GATEKEEPER_DIR", gatekeeperInstallationPath);
+            }            
+
+            Console.WriteLine("--> Installing Beame.io Gatekeeper from npm master");
+            string nodeJSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs");
+            string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
+            try
+            {
+                //add GIT to path before starting this installation, in case GIT was just recently installed
+                result = StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, "C:\\Program Files\\Git\\cmd");
+                Console.WriteLine("Beame.io Gatekeeper installation " + (result ? "suceeded" : "failed"));
             }
-            else
+            catch (Exception ex)
+            {
+                Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
+            }
+        
+            if (!string.IsNullOrWhiteSpace(customGatekeeper))
             {
                 Console.WriteLine("--> Installing custom Beame.io Gatekeeper from " + customGatekeeper);
                 // TODO
@@ -188,19 +197,25 @@ namespace BeameWindowsInstaller
         private static void AddProxySettingsToBeame()
         {
             // set git proxy
-            if (!String.IsNullOrWhiteSpace(proxyAddress))
+            if (!string.IsNullOrWhiteSpace(proxyAddress))
             {
-                // TODO 
-                // add to ~/.beame_server/config/app_config.json   
-                //   "ProxySettings": {
-                //       "host": "descproxy01.brainlab.net",
-                //         "port": 8080,
-                //         "excludes": "127.0.0.1,localhost"
-                //   },
-                //  "ExternalOcspServerFqdn": "iep9bs1p7cj3cmit.tl5h1ipgobrdqsj6.v1.p.beameio.net“,
+                string file = Path.Combine(homeFolder, @".beame_server\config\app_config.json");
+                Console.WriteLine("--> Changing proxy settings in file " + file);
 
-
-                // add HTTP_PROXY, HTTPS_PROXY, FTP_PROXY
+                string json = File.ReadAllText(file);
+                dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+                jsonObj["ProxySettings"]["host"] = proxyAddressFqdn;
+                jsonObj["ProxySettings"]["port"] = proxyAddressPort;
+                jsonObj["ProxySettings"]["excludes"] = proxyAddressExcludes;
+                jsonObj["ExternalOcspServerFqdn"] = "iep9bs1p7cj3cmit.tl5h1ipgobrdqsj6.v1.p.beameio.net";
+                string output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
+                File.WriteAllText(file, output);
+                
+                Console.WriteLine("--> Setting cmdline proxy");
+                SetEnv("HTTP_PROXY", proxyAddress);
+                SetEnv("HTTPS_PROXY", proxyAddress);
+                SetEnv("FTP_PROXY", proxyAddress);
+                SetEnv("NO_PROXY", proxyAddressExcludes);
             }
         }
 
@@ -232,7 +247,7 @@ namespace BeameWindowsInstaller
             }
 
             // set git proxy
-            if (!String.IsNullOrWhiteSpace(proxyAddress))
+            if (!string.IsNullOrWhiteSpace(proxyAddress))
             {
                 string gitcmd = Path.Combine(gitPath, "git-cmd.exe");
                 StartAndCheckReturn(gitcmd, "config --global http.proxy " + proxyAddress);
@@ -271,7 +286,7 @@ namespace BeameWindowsInstaller
                     string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
 
                     // set npm proxy
-                    if (!String.IsNullOrWhiteSpace(proxyAddress))
+                    if (!string.IsNullOrWhiteSpace(proxyAddress))
                     {
                         StartAndCheckReturn(npmPath, "config set proxy " + proxyAddress);
                         StartAndCheckReturn(npmPath, "config set https-proxy " + proxyAddress);
