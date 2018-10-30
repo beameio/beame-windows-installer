@@ -144,7 +144,7 @@ namespace BeameWindowsInstaller
             if (!string.IsNullOrWhiteSpace(customGatekeeperCSS) || !string.IsNullOrWhiteSpace(customGatekeeper))
             {
                 var gatekeeperPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    @"Roaming\npm\node_modules\beame-gatekeeper");
+                    @"npm\node_modules\beame-gatekeeper");
 
                 if (!string.IsNullOrWhiteSpace(customGatekeeperCSS))
                 {
@@ -174,7 +174,7 @@ namespace BeameWindowsInstaller
             AddProxySettingsToBeame();
             
             Console.WriteLine("--> creating windows service");
-            Helper.StartAndCheckReturn("sc.exe", "create \"Beame Gatekeeper\" binpath= \"\"" + Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Roaming\npm\beame-gatekeeper.cmd") + "\" server start\" start= auto");
+            Helper.StartAndCheckReturn("sc.exe", "create \"Beame Gatekeeper\" binpath= \"\"" + Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"npm\beame-gatekeeper.cmd") + "\" server start\" start= auto");
            
             return result;
         }
