@@ -46,11 +46,6 @@ namespace BeameWindowsInstaller
             Console.WriteLine("Note: install dependencies before any other software");
             Console.WriteLine();
 
-
-            // TODO
-            //   Install as service in windows
-
-
             WindowsIdentity identity = WindowsIdentity.GetCurrent();
             WindowsPrincipal principal = new WindowsPrincipal(identity);
             if (principal.IsInRole(WindowsBuiltInRole.Administrator))
