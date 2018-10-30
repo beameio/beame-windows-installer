@@ -19,6 +19,7 @@ namespace BeameWindowsInstaller
         static readonly string proxyAddressFqdn = ConfigurationManager.AppSettings["ProxyAddressAddress"];
         static readonly string proxyAddressPort = ConfigurationManager.AppSettings["ProxyAddressPort"];
         static readonly string proxyAddressExcludes = ConfigurationManager.AppSettings["ProxyAddressExcludes"];
+        static readonly string externalOcspServerFqdn = ConfigurationManager.AppSettings["ExternalOcspServerFqdn"];
         static readonly string proxyAddress = string.IsNullOrWhiteSpace(proxyAddressFqdn) 
                 ? "" 
                 : proxyAddressProtocol + "://" +  proxyAddressFqdn + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort);
@@ -37,11 +38,7 @@ namespace BeameWindowsInstaller
             Dependencies = 7,
             Exit = 9
         }
-
-        public static void SetEnv(string name, string value) 
-        {
-            Environment.SetEnvironmentVariable(name, value, EnvironmentVariableTarget.Machine);
-        }
+        
         
         static void Main(string[] args)
         {
@@ -135,7 +132,7 @@ namespace BeameWindowsInstaller
             if (!string.IsNullOrWhiteSpace(gatekeeperInstallationPath))
             {
                 Console.WriteLine("--> Setting gatekeeper base dir to " + gatekeeperInstallationPath);
-                SetEnv("BEAME_GATEKEEPER_DIR", gatekeeperInstallationPath);
+                Helper.SetEnv("BEAME_GATEKEEPER_DIR", gatekeeperInstallationPath);
             }            
 
             Console.WriteLine("--> Installing Beame.io Gatekeeper from npm master");
@@ -144,7 +141,7 @@ namespace BeameWindowsInstaller
             try
             {
                 //add GIT to path before starting this installation, in case GIT was just recently installed
-                result = StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, "C:\\Program Files\\Git\\cmd");
+                result = Helper.StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, "C:\\Program Files\\Git\\cmd");
                 Console.WriteLine("Beame.io Gatekeeper installation " + (result ? "suceeded" : "failed"));
             }
             catch (Exception ex)
@@ -182,7 +179,7 @@ namespace BeameWindowsInstaller
             try
             {
                 //add GIT to path before starting this installation, in case GIT was just recently installed
-                result = StartAndCheckReturn(npmPath, "install -g beame-sdk", false, "C:\\Program Files\\Git\\cmd");
+                result = Helper.StartAndCheckReturn(npmPath, "install -g beame-sdk", false, "C:\\Program Files\\Git\\cmd");
                 Console.WriteLine("Beame.io SDK installation " + (result ? "suceeded" : "failed"));
             }
             catch (Exception ex)
@@ -207,15 +204,15 @@ namespace BeameWindowsInstaller
                 jsonObj["ProxySettings"]["host"] = proxyAddressFqdn;
                 jsonObj["ProxySettings"]["port"] = proxyAddressPort;
                 jsonObj["ProxySettings"]["excludes"] = proxyAddressExcludes;
-                jsonObj["ExternalOcspServerFqdn"] = "iep9bs1p7cj3cmit.tl5h1ipgobrdqsj6.v1.p.beameio.net";
+                jsonObj["ExternalOcspServerFqdn"] = externalOcspServerFqdn;
                 string output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
                 File.WriteAllText(file, output);
                 
                 Console.WriteLine("--> Setting cmdline proxy");
-                SetEnv("HTTP_PROXY", proxyAddress);
-                SetEnv("HTTPS_PROXY", proxyAddress);
-                SetEnv("FTP_PROXY", proxyAddress);
-                SetEnv("NO_PROXY", proxyAddressExcludes);
+                Helper.SetEnv("HTTP_PROXY", proxyAddress);
+                Helper.SetEnv("HTTPS_PROXY", proxyAddress);
+                Helper.SetEnv("FTP_PROXY", proxyAddress);
+                Helper.SetEnv("NO_PROXY", proxyAddressExcludes);
             }
         }
 
@@ -236,9 +233,9 @@ namespace BeameWindowsInstaller
             if (!Directory.Exists(gitPath) || !File.Exists(Path.Combine(gitPath, "git-cmd.exe")))
             {
                 string exePath = Path.Combine(Path.GetTempPath(), gitInstaller);
-                WriteResourceToFile(gitInstaller, exePath);
+                Helper.WriteResourceToFile(gitInstaller, exePath);
 
-                result = StartAndCheckReturn(exePath, "");
+                result = Helper.StartAndCheckReturn(exePath, "/VERYSILENT /CLOSEAPPLICATIONS /NORESTART");
                 Console.WriteLine("Git installation " + (result ? "suceeded" : "failed"));
             }
             else
@@ -246,12 +243,12 @@ namespace BeameWindowsInstaller
                 Console.WriteLine("Git already installed");
             }
 
-            // set git proxy
+            // set git proxy if defined
             if (!string.IsNullOrWhiteSpace(proxyAddress))
             {
                 string gitcmd = Path.Combine(gitPath, "git-cmd.exe");
-                StartAndCheckReturn(gitcmd, "config --global http.proxy " + proxyAddress);
-                StartAndCheckReturn(gitcmd, "config --global https.proxy " + proxyAddress);
+                Helper.StartAndCheckReturn(gitcmd, "config --global http.proxy " + proxyAddress);
+                Helper.StartAndCheckReturn(gitcmd, "config --global https.proxy " + proxyAddress);
             }
             return result;
         }
@@ -273,8 +270,8 @@ namespace BeameWindowsInstaller
                 }
                 else
                 {
-                    WriteResourceToFile(nodeInstaller, msiPath);
-                    result = StartAndCheckReturn("msiexec", "/i " + msiPath);
+                    Helper.WriteResourceToFile(nodeInstaller, msiPath);
+                    result = Helper.StartAndCheckReturn("msiexec", "/i " + msiPath + " /quiet /qn /norestart");
                     Console.WriteLine("NodeJS installation " + (result ? "suceeded" : "failed"));
 
                     // TODO: when node installed it seems that a relogin is required before proceeding in order to reload the environment -- find a way to handle this
@@ -285,16 +282,16 @@ namespace BeameWindowsInstaller
                     Console.WriteLine("Updating npm packages");
                     string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
 
-                    // set npm proxy
+                    // set npm proxy if defined
                     if (!string.IsNullOrWhiteSpace(proxyAddress))
                     {
-                        StartAndCheckReturn(npmPath, "config set proxy " + proxyAddress);
-                        StartAndCheckReturn(npmPath, "config set https-proxy " + proxyAddress);
+                        Helper.StartAndCheckReturn(npmPath, "config set proxy " + proxyAddress);
+                        Helper.StartAndCheckReturn(npmPath, "config set https-proxy " + proxyAddress);
                     }
 
                     //run NPM upgrade
-                    result = StartAndCheckReturn(npmPath, "install -g npm@latest");
-                    result = StartAndCheckReturn(npmPath, "install -g --production windows-build-tools");
+                    result = Helper.StartAndCheckReturn(npmPath, "install -g npm@latest");
+                    result = Helper.StartAndCheckReturn(npmPath, "install -g --production windows-build-tools");
                 }
             }
             catch (Exception ex)
@@ -342,7 +339,7 @@ namespace BeameWindowsInstaller
                 else
                 {
                     string tmpPath = Path.Combine(Path.GetTempPath(), openSSLInstaller);
-                    WriteResourceToFile(openSSLInstaller, tmpPath);
+                    Helper.WriteResourceToFile(openSSLInstaller, tmpPath);
 
                     Console.WriteLine("extracting files...");
                     ZipFile.ExtractToDirectory(tmpPath, "c:/");
@@ -357,44 +354,6 @@ namespace BeameWindowsInstaller
                 Console.WriteLine("Failed - {0}", ex.Message);
                 return false;
             }
-        }
-
-        static void WriteResourceToFile(string resourceName, string fileName)
-        {
-            using (var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("BeameWindowsInstaller.Resources." + resourceName))
-            {
-                using (var file = new FileStream(fileName, FileMode.Create, FileAccess.Write))
-                {
-                    resource.CopyTo(file);
-                }
-            }
-        }
-
-        static bool StartAndCheckReturn(string fileName, string arguments, bool useShellExecute = false, string addToPath = "", int timeoutMinutes = 10)
-        {
-
-            var procStartInfo = new ProcessStartInfo()
-            {
-                FileName = fileName,
-                Arguments = arguments,
-                UseShellExecute = useShellExecute,
-            };
-            if (!string.IsNullOrEmpty(addToPath))
-            {
-                string envPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine);
-                envPath += ";" + addToPath;
-                procStartInfo.EnvironmentVariables["PATH"] = envPath;
-            }
-            var proc = Process.Start(procStartInfo);
-
-            bool timedOut = !proc.WaitForExit(timeoutMinutes * 60 * 1000);
-
-            if (proc.ExitCode < 0)
-            {
-                Environment.ExitCode = proc.ExitCode;
-            }
-
-            return !timedOut && proc.ExitCode == 0;
         }
     }
 }
