@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Reflection;
 using System.Configuration;
 using System.Security.Principal;
 
@@ -26,7 +25,6 @@ namespace BeameWindowsInstaller
 
         static readonly string customGatekeeper = ConfigurationManager.AppSettings["CustomGatekeeper"];
         static readonly string customGatekeeperCSS = ConfigurationManager.AppSettings["CustomGatekeeperCSS"];
-        static readonly string gatekeeperInstallationPath = ConfigurationManager.AppSettings["GatekeeperInstallationPath"];
 
         static string progFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
         static string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -49,8 +47,7 @@ namespace BeameWindowsInstaller
 
 
             // TODO
-            //   Confirm dependencies install in one go
-            //   Make dependencies installation silent
+            //   Confirm dependencies install in one goß
             //   Install as service in windows
 
 
@@ -129,33 +126,28 @@ namespace BeameWindowsInstaller
         {
             bool result = false;
 
-            if (!string.IsNullOrWhiteSpace(gatekeeperInstallationPath))
-            {
-                Console.WriteLine("--> Setting gatekeeper base dir to " + gatekeeperInstallationPath);
-                Helper.SetEnv("BEAME_GATEKEEPER_DIR", gatekeeperInstallationPath);
-            }            
-
             Console.WriteLine("--> Installing Beame.io Gatekeeper from npm master");
             string nodeJSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs");
             string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
             try
             {
                 //add GIT to path before starting this installation, in case GIT was just recently installed
-                result = Helper.StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, "C:\\Program Files\\Git\\cmd");
+                result = Helper.StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, @"C:\Program Files\Git\cmd");
                 Console.WriteLine("Beame.io Gatekeeper installation " + (result ? "suceeded" : "failed"));
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
             }
-        
+
+            var gatekeeperPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"node_modules\beame-gatekeeper");
+            
             if (!string.IsNullOrWhiteSpace(customGatekeeper))
             {
                 Console.WriteLine("--> Installing custom Beame.io Gatekeeper from " + customGatekeeper);
                 // TODO
 
             }
-
 
             if(!String.IsNullOrWhiteSpace(customGatekeeperCSS))
             {
@@ -217,7 +209,7 @@ namespace BeameWindowsInstaller
         }
 
         private static void InstallDeps() {
-            if (!InstallGit() || !InstallNode() || !InstallOpenSSL())
+            if (!InstallOpenSSL() || !InstallGit() || !InstallNode())
             {
                 Console.ReadLine();
                 Environment.Exit(Environment.ExitCode);
@@ -230,7 +222,7 @@ namespace BeameWindowsInstaller
 
             //check for GIT and install it if necessary
             string gitPath = Path.Combine(progFolder, "Git");
-            if (!Directory.Exists(gitPath) || !File.Exists(Path.Combine(gitPath, "git-cmd.exe")))
+            if (!Directory.Exists(gitPath) || !File.Exists(Path.Combine(gitPath, @"bin\git.exe")))
             {
                 string exePath = Path.Combine(Path.GetTempPath(), gitInstaller);
                 Helper.WriteResourceToFile(gitInstaller, exePath);
@@ -245,8 +237,8 @@ namespace BeameWindowsInstaller
 
             // set git proxy if defined
             if (!string.IsNullOrWhiteSpace(proxyAddress))
-            {
-                string gitcmd = Path.Combine(gitPath, "git-cmd.exe");
+            {                
+                string gitcmd = Path.Combine(gitPath, @"bin\git.exe");
                 Helper.StartAndCheckReturn(gitcmd, "config --global http.proxy " + proxyAddress);
                 Helper.StartAndCheckReturn(gitcmd, "config --global https.proxy " + proxyAddress);
             }
@@ -273,8 +265,6 @@ namespace BeameWindowsInstaller
                     Helper.WriteResourceToFile(nodeInstaller, msiPath);
                     result = Helper.StartAndCheckReturn("msiexec", "/i " + msiPath + " /quiet /qn /norestart");
                     Console.WriteLine("NodeJS installation " + (result ? "suceeded" : "failed"));
-
-                    // TODO: when node installed it seems that a relogin is required before proceeding in order to reload the environment -- find a way to handle this
                 }
 
                 if (result)
@@ -290,8 +280,8 @@ namespace BeameWindowsInstaller
                     }
 
                     //run NPM upgrade
-                    result = Helper.StartAndCheckReturn(npmPath, "install -g npm@latest");
-                    result = Helper.StartAndCheckReturn(npmPath, "install -g --production windows-build-tools");
+                    result = Helper.StartAndCheckReturn(npmPath, "install -g npm@latest")
+                             && Helper.StartAndCheckReturn(npmPath, "install -g --production --add-python-to-path='true' windows-build-tools");
                 }
             }
             catch (Exception ex)
@@ -331,7 +321,7 @@ namespace BeameWindowsInstaller
                     Directory.CreateDirectory(openSSLPath);
                 }
                 
-                string openSSLFile = Path.Combine(openSSLPath, "bin/openssl.exe");
+                string openSSLFile = Path.Combine(openSSLPath, @"bin\openssl.exe");
                 if (File.Exists(openSSLFile))
                 {
                     Console.WriteLine("Already exists...");
@@ -342,8 +332,8 @@ namespace BeameWindowsInstaller
                     Helper.WriteResourceToFile(openSSLInstaller, tmpPath);
 
                     Console.WriteLine("extracting files...");
-                    ZipFile.ExtractToDirectory(tmpPath, "c:/");
-                    Environment.SetEnvironmentVariable("OPENSSL_CONF", Path.Combine(openSSLPath, "ssl/openssl.cnf"), EnvironmentVariableTarget.Machine);
+                    ZipFile.ExtractToDirectory(tmpPath, @"c:\");
+                    Environment.SetEnvironmentVariable("OPENSSL_CONF", Path.Combine(openSSLPath, @"ssl\openssl.cnf"), EnvironmentVariableTarget.Machine);
                 }
 
                 Console.WriteLine("OK");
