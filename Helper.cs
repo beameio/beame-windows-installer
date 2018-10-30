@@ -23,7 +23,7 @@ namespace BeameWindowsInstaller
             }
         }
 
-        public static bool StartAndCheckReturn(string fileName, string arguments, bool useShellExecute = false, string addToPath = "", int timeoutMinutes = 10)
+        public static bool StartAndCheckReturn(string fileName, string arguments, bool useShellExecute = false, string addToPath = "", int timeoutMinutes = 10, string workingDir = "")
         {
 
             var procStartInfo = new ProcessStartInfo()
@@ -32,7 +32,11 @@ namespace BeameWindowsInstaller
                 Arguments = arguments,
                 UseShellExecute = useShellExecute,
             };
-            if (!string.IsNullOrEmpty(addToPath))
+
+            if (!string.IsNullOrWhiteSpace(workingDir))
+                procStartInfo.WorkingDirectory = workingDir;
+            
+            if (!string.IsNullOrWhiteSpace(addToPath))
             {
                 string envPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine);
                 envPath += ";" + addToPath;
@@ -47,5 +51,19 @@ namespace BeameWindowsInstaller
             }
 
             return !timedOut && proc.ExitCode == 0;
-        }    }
+        }
+        
+        public static void RemoveFile(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch
+            { }
+        }
+    }
 }

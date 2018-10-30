@@ -47,7 +47,6 @@ namespace BeameWindowsInstaller
 
 
             // TODO
-            //   Confirm dependencies install in one goß
             //   Install as service in windows
 
 
@@ -140,20 +139,26 @@ namespace BeameWindowsInstaller
                 Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
             }
 
-            var gatekeeperPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"node_modules\beame-gatekeeper");
-            
-            if (!string.IsNullOrWhiteSpace(customGatekeeper))
+
+            if (!string.IsNullOrWhiteSpace(customGatekeeperCSS) || !string.IsNullOrWhiteSpace(customGatekeeper))
             {
-                Console.WriteLine("--> Installing custom Beame.io Gatekeeper from " + customGatekeeper);
-                // TODO
+                var gatekeeperPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    @"Roaming\npm\node_modules\beame-gatekeeper");
+                
+                if (!string.IsNullOrWhiteSpace(customGatekeeperCSS))
+                {
+                    Console.WriteLine("--> Adding custom css to Beame.io Gatekeeper from " + customGatekeeperCSS);
+                    ZipFile.ExtractToDirectory(customGatekeeperCSS, gatekeeperPath);
+                }
+                if (!string.IsNullOrWhiteSpace(customGatekeeper))
+                {
+                    Console.WriteLine("--> Installing custom Beame.io Gatekeeper from " + customGatekeeper);
+                    ZipFile.ExtractToDirectory(customGatekeeper, gatekeeperPath);
+                }
 
-            }
-
-            if(!String.IsNullOrWhiteSpace(customGatekeeperCSS))
-            {
-                Console.WriteLine("--> Adding custom css to Beame.io Gatekeeper");
-                // TODO
-
+                string nodePath = Path.Combine(nodeJSPath, "node.exe");
+                Helper.StartAndCheckReturn(npmPath, "install", false, "", 10, gatekeeperPath);
+                Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js sass web_sass compile", false, "", 10, gatekeeperPath);
             }
 
             AddProxySettingsToBeame();
@@ -291,23 +296,10 @@ namespace BeameWindowsInstaller
             }
             finally
             {
-                RemoveFile(msiPath);
+                Helper.RemoveFile(msiPath);
             }
 
             return result;
-        }
-
-        private static void RemoveFile(string path)
-        {
-            try
-            {
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                }
-            }
-            catch
-            { }
         }
 
         private static bool InstallOpenSSL()
