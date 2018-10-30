@@ -129,6 +129,7 @@ namespace BeameWindowsInstaller
             Console.WriteLine("--> Installing Beame.io Gatekeeper from npm master");
             string nodeJSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs");
             string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
+            string nodePath = Path.Combine(nodeJSPath, "node.exe");
             try
             {
                 //add GIT to path before starting this installation, in case GIT was just recently installed
@@ -139,13 +140,12 @@ namespace BeameWindowsInstaller
             {
                 Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
             }
-
-
+ 
             if (!string.IsNullOrWhiteSpace(customGatekeeperCSS) || !string.IsNullOrWhiteSpace(customGatekeeper))
             {
                 var gatekeeperPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     @"Roaming\npm\node_modules\beame-gatekeeper");
-                
+
                 if (!string.IsNullOrWhiteSpace(customGatekeeperCSS))
                 {
                     Console.WriteLine("--> Adding custom css to Beame.io Gatekeeper from " + customGatekeeperCSS);
@@ -167,7 +167,6 @@ namespace BeameWindowsInstaller
                     }
                 }
 
-                string nodePath = Path.Combine(nodeJSPath, "node.exe");
                 Helper.StartAndCheckReturn(npmPath, "install", false, "", 10, gatekeeperPath);
                 Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js sass web_sass compile", false, "", 10, gatekeeperPath);
             }
@@ -175,7 +174,7 @@ namespace BeameWindowsInstaller
             AddProxySettingsToBeame();
             
             Console.WriteLine("--> creating windows service");
-            Helper.StartAndCheckReturn("sc.exe", "create \"Beame Gatekeeper\" binpath= \"\"C:\\Users\\Administrator\\AppData\\Roaming\\npm\\beame-gatekeeper\" server start\" start= auto");
+            Helper.StartAndCheckReturn("sc.exe", "create \"Beame Gatekeeper\" binpath= \"\"" + Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Roaming\npm\beame-gatekeeper.cmd") + "\" server start\" start= auto");
            
             return result;
         }
