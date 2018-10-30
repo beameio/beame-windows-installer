@@ -16,7 +16,7 @@ namespace BeameWindowsInstaller
 
         static readonly string openSSLPath = ConfigurationManager.AppSettings["OpenSSLPath"];
         static readonly string proxyAddressProtocol = ConfigurationManager.AppSettings["ProxyAddressProtocol"];
-        static readonly string proxyAddressFqdn = ConfigurationManager.AppSettings["ProxyAddressAddress"];
+        static readonly string proxyAddressFqdn = ConfigurationManager.AppSettings["ProxyAddressFqdn"];
         static readonly string proxyAddressPort = ConfigurationManager.AppSettings["ProxyAddressPort"];
         static readonly string proxyAddressExcludes = ConfigurationManager.AppSettings["ProxyAddressExcludes"];
         static readonly string externalOcspServerFqdn = ConfigurationManager.AppSettings["ExternalOcspServerFqdn"];
@@ -141,16 +141,6 @@ namespace BeameWindowsInstaller
                 var gatekeeperPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     @"npm\node_modules\beame-gatekeeper");
 
-                if (!string.IsNullOrWhiteSpace(customGatekeeperCSS))
-                {
-                    Console.WriteLine("--> Adding custom css to Beame.io Gatekeeper from " + customGatekeeperCSS);
-                    using (var strm = File.OpenRead(customGatekeeperCSS))
-                    using (var a = new ZipArchive(strm))
-                    {
-                        a.Entries.Where(o => o.Name == string.Empty && !Directory.Exists(Path.Combine(gatekeeperPath, o.FullName))).ToList().ForEach(o => Directory.CreateDirectory(Path.Combine(gatekeeperPath, o.FullName)));
-                        a.Entries.Where(o => o.Name != string.Empty).ToList().ForEach(e => e.ExtractToFile(Path.Combine(gatekeeperPath, e.FullName), true));
-                    }
-                }
                 if (!string.IsNullOrWhiteSpace(customGatekeeper))
                 {
                     Console.WriteLine("--> Installing custom Beame.io Gatekeeper from " + customGatekeeper);
@@ -161,7 +151,17 @@ namespace BeameWindowsInstaller
                         a.Entries.Where(o => o.Name != string.Empty).ToList().ForEach(e => e.ExtractToFile(Path.Combine(gatekeeperPath, e.FullName), true));
                     }
                 }
-
+                if (!string.IsNullOrWhiteSpace(customGatekeeperCSS))
+                {
+                    Console.WriteLine("--> Adding custom css to Beame.io Gatekeeper from " + customGatekeeperCSS);
+                    using (var strm = File.OpenRead(customGatekeeperCSS))
+                    using (var a = new ZipArchive(strm))
+                    {
+                        a.Entries.Where(o => o.Name == string.Empty && !Directory.Exists(Path.Combine(gatekeeperPath, o.FullName))).ToList().ForEach(o => Directory.CreateDirectory(Path.Combine(gatekeeperPath, o.FullName)));
+                        a.Entries.Where(o => o.Name != string.Empty).ToList().ForEach(e => e.ExtractToFile(Path.Combine(gatekeeperPath, e.FullName), true));
+                    }
+                }
+                
                 Helper.StartAndCheckReturn(npmPath, "install", false, "", 10, gatekeeperPath);
                 Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js sass web_sass compile", false, "", 10, gatekeeperPath);
             }
