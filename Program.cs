@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Configuration;
 using System.Security.Principal;
+using System.Linq;
 
 namespace BeameWindowsInstaller
 {
@@ -148,12 +149,22 @@ namespace BeameWindowsInstaller
                 if (!string.IsNullOrWhiteSpace(customGatekeeperCSS))
                 {
                     Console.WriteLine("--> Adding custom css to Beame.io Gatekeeper from " + customGatekeeperCSS);
-                    ZipFile.ExtractToDirectory(customGatekeeperCSS, gatekeeperPath);
+                    using (var strm = File.OpenRead(customGatekeeperCSS))
+                    using (var a = new ZipArchive(strm))
+                    {
+                        a.Entries.Where(o => o.Name == string.Empty && !Directory.Exists(Path.Combine(gatekeeperPath, o.FullName))).ToList().ForEach(o => Directory.CreateDirectory(Path.Combine(gatekeeperPath, o.FullName)));
+                        a.Entries.Where(o => o.Name != string.Empty).ToList().ForEach(e => e.ExtractToFile(Path.Combine(gatekeeperPath, e.FullName), true));
+                    }
                 }
                 if (!string.IsNullOrWhiteSpace(customGatekeeper))
                 {
                     Console.WriteLine("--> Installing custom Beame.io Gatekeeper from " + customGatekeeper);
-                    ZipFile.ExtractToDirectory(customGatekeeper, gatekeeperPath);
+                    using (var strm = File.OpenRead(customGatekeeper))
+                    using (var a = new ZipArchive(strm))
+                    {
+                        a.Entries.Where(o => o.Name == string.Empty && !Directory.Exists(Path.Combine(gatekeeperPath, o.FullName))).ToList().ForEach(o => Directory.CreateDirectory(Path.Combine(gatekeeperPath, o.FullName)));
+                        a.Entries.Where(o => o.Name != string.Empty).ToList().ForEach(e => e.ExtractToFile(Path.Combine(gatekeeperPath, e.FullName), true));
+                    }
                 }
 
                 string nodePath = Path.Combine(nodeJSPath, "node.exe");
