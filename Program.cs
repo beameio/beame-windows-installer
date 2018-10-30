@@ -173,6 +173,10 @@ namespace BeameWindowsInstaller
             }
 
             AddProxySettingsToBeame();
+            
+            Console.WriteLine("--> creating windows service");
+            Helper.StartAndCheckReturn("sc.exe", "create \"Beame Gatekeeper\" binpath= \"\"C:\\Users\\Administrator\\AppData\\Roaming\\npm\\beame-gatekeeper\" server start\" start= auto");
+           
             return result;
         }
 
