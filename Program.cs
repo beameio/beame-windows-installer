@@ -285,25 +285,25 @@ namespace BeameWindowsInstaller
                     Helper.WriteResourceToFile(nodeInstaller, msiPath);
                     result = Helper.StartAndCheckReturn("msiexec", "/i " + msiPath + " /quiet /qn /norestart");
                     Console.WriteLine("NodeJS installation " + (result ? "suceeded" : "failed"));
-                    
+
                     Helper.AddToPath(nodeJSPath);
                     Helper.AddToPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"npm\"));
-
-                    if (result)
-                    {
-                        Console.WriteLine("Updating npm packages");
-                        
-                        //run NPM upgrade
-                        result = Helper.StartAndCheckReturn(npmPath, "install -g npm@latest")
-                                 && Helper.StartAndCheckReturn(npmPath, "install -g --production --add-python-to-path='true' windows-build-tools");
-                    }
                 }
 
-                // set npm proxy if defined
-                if (!string.IsNullOrWhiteSpace(proxyAddress))
+                if (result)
                 {
-                    Helper.StartAndCheckReturn(npmPath, "config set proxy " + proxyAddress);
-                    Helper.StartAndCheckReturn(npmPath, "config set https-proxy " + proxyAddress);
+                    // set npm proxy if defined
+                    if (!string.IsNullOrWhiteSpace(proxyAddress))
+                    {
+                        Helper.StartAndCheckReturn(npmPath, "config set proxy " + proxyAddress);
+                        Helper.StartAndCheckReturn(npmPath, "config set https-proxy " + proxyAddress);
+                    }
+                    
+                    Console.WriteLine("Updating npm packages");
+                        
+                    //run NPM upgrade
+                    result = Helper.StartAndCheckReturn(npmPath, "install -g npm@latest")
+                             && Helper.StartAndCheckReturn(npmPath, "install -g --production --add-python-to-path='true' windows-build-tools");
                 }
             }
             catch (Exception ex)
