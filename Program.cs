@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Configuration;
 using System.Security.Principal;
 using System.Linq;
+using System.Security.AccessControl;
 
 namespace BeameWindowsInstaller
 {
@@ -26,9 +27,9 @@ namespace BeameWindowsInstaller
 
         static readonly string customGatekeeper = ConfigurationManager.AppSettings["CustomGatekeeper"];
         static readonly string customGatekeeperCSS = ConfigurationManager.AppSettings["CustomGatekeeperCSS"];
-
-        static string progFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        static string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        
+        static readonly string progFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        static readonly string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         
         enum InstallerOptions
         {
@@ -46,8 +47,8 @@ namespace BeameWindowsInstaller
             Console.WriteLine("Note: install dependencies before any other software");
             Console.WriteLine();
 
-            WindowsIdentity identity = WindowsIdentity.GetCurrent();
-            WindowsPrincipal principal = new WindowsPrincipal(identity);
+            var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
             if (principal.IsInRole(WindowsBuiltInRole.Administrator))
             {
                 string selected;
@@ -68,9 +69,8 @@ namespace BeameWindowsInstaller
                     selected = Console.ReadLine();
                 }
 
-                InstallerOptions opt;
-                Enum.TryParse(selected, out opt);
-                bool installed = false;
+                Enum.TryParse(selected, out InstallerOptions opt);
+                var installed = false;
                 switch(opt)
                 {
                     case InstallerOptions.Gatekeeper:
@@ -119,12 +119,15 @@ namespace BeameWindowsInstaller
 
         private static bool InstallBeameGateKeeper()
         {
-            bool result = false;
+            var result = false;
 
             Console.WriteLine("--> Installing Beame.io Gatekeeper from npm master");
-            string nodeJSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs");
-            string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
-            string nodePath = Path.Combine(nodeJSPath, "node.exe");
+            var nodeJSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs");
+            var npmPath = Path.Combine(nodeJSPath, "npm.cmd");
+            var nodePath = Path.Combine(nodeJSPath, "node.exe");
+            var gatekeeperPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                @"npm\node_modules\beame-gatekeeper");
+
             try
             {
                 //add GIT to path before starting this installation, in case GIT was just recently installed
@@ -135,33 +138,36 @@ namespace BeameWindowsInstaller
             {
                 Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
             }
- 
+
+            
+            if (!string.IsNullOrWhiteSpace(customGatekeeper))
+            {
+                // If custom gatekeeper remove gatekeeper directory and add custom one
+                Console.WriteLine("--> Installing custom Beame.io Gatekeeper from " + customGatekeeper);
+                if (Directory.Exists(gatekeeperPath))
+                {
+                    var dir = new DirectoryInfo(gatekeeperPath);
+                    dir.Delete(true);
+                }
+                ZipFile.ExtractToDirectory(customGatekeeper, gatekeeperPath);
+            }
+
+            if (!string.IsNullOrWhiteSpace(customGatekeeperCSS))
+            {
+                Console.WriteLine("--> Adding custom css to Beame.io Gatekeeper from " + customGatekeeperCSS);
+                using (var strm = File.OpenRead(customGatekeeperCSS))
+                using (var a = new ZipArchive(strm))
+                {
+                    a.Entries.Where(o => o.Name == string.Empty && !Directory.Exists(Path.Combine(gatekeeperPath, o.FullName))).ToList().ForEach(o => Directory.CreateDirectory(Path.Combine(gatekeeperPath, o.FullName)));
+                    a.Entries.Where(o => o.Name != string.Empty).ToList().ForEach(e => e.ExtractToFile(Path.Combine(gatekeeperPath, e.FullName), true));
+                }
+            }
+            
             if (!string.IsNullOrWhiteSpace(customGatekeeperCSS) || !string.IsNullOrWhiteSpace(customGatekeeper))
             {
-                var gatekeeperPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    @"npm\node_modules\beame-gatekeeper");
+                Console.WriteLine("--> Installing custom Beame.io Gatekeeper");
 
-                if (!string.IsNullOrWhiteSpace(customGatekeeper))
-                {
-                    Console.WriteLine("--> Installing custom Beame.io Gatekeeper from " + customGatekeeper);
-                    using (var strm = File.OpenRead(customGatekeeper))
-                    using (var a = new ZipArchive(strm))
-                    {
-                        a.Entries.Where(o => o.Name == string.Empty && !Directory.Exists(Path.Combine(gatekeeperPath, o.FullName))).ToList().ForEach(o => Directory.CreateDirectory(Path.Combine(gatekeeperPath, o.FullName)));
-                        a.Entries.Where(o => o.Name != string.Empty).ToList().ForEach(e => e.ExtractToFile(Path.Combine(gatekeeperPath, e.FullName), true));
-                    }
-                }
-                if (!string.IsNullOrWhiteSpace(customGatekeeperCSS))
-                {
-                    Console.WriteLine("--> Adding custom css to Beame.io Gatekeeper from " + customGatekeeperCSS);
-                    using (var strm = File.OpenRead(customGatekeeperCSS))
-                    using (var a = new ZipArchive(strm))
-                    {
-                        a.Entries.Where(o => o.Name == string.Empty && !Directory.Exists(Path.Combine(gatekeeperPath, o.FullName))).ToList().ForEach(o => Directory.CreateDirectory(Path.Combine(gatekeeperPath, o.FullName)));
-                        a.Entries.Where(o => o.Name != string.Empty).ToList().ForEach(e => e.ExtractToFile(Path.Combine(gatekeeperPath, e.FullName), true));
-                    }
-                }
-                
+                // Make install and gulp if any custom was applied
                 Helper.StartAndCheckReturn(npmPath, "install", false, "", 10, gatekeeperPath);
                 Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js sass web_sass compile", false, "", 10, gatekeeperPath);
             }
@@ -177,11 +183,11 @@ namespace BeameWindowsInstaller
 
         private static bool InstallBeameSDK()
         {
-            bool result = false;
+            var result = false;
             Console.WriteLine("Installing Beame.io SDK...");
 
-            string nodeJSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs");
-            string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
+            var nodeJSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs");
+            var npmPath = Path.Combine(nodeJSPath, "npm.cmd");
             try
             {
                 //add GIT to path before starting this installation, in case GIT was just recently installed
@@ -200,26 +206,25 @@ namespace BeameWindowsInstaller
         private static void AddProxySettingsToBeame()
         {
             // set git proxy
-            if (!string.IsNullOrWhiteSpace(proxyAddress))
-            {
-                string file = Path.Combine(homeFolder, @".beame_server\config\app_config.json");
-                Console.WriteLine("--> Changing proxy settings in file " + file);
+            if (string.IsNullOrWhiteSpace(proxyAddress)) return;
+            
+            var file = Path.Combine(homeFolder, @".beame_server\config\app_config.json");
+            Console.WriteLine("--> Changing proxy settings in file " + file);
 
-                string json = File.ReadAllText(file);
-                dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
-                jsonObj["ProxySettings"]["host"] = proxyAddressFqdn;
-                jsonObj["ProxySettings"]["port"] = proxyAddressPort;
-                jsonObj["ProxySettings"]["excludes"] = proxyAddressExcludes;
-                jsonObj["ExternalOcspServerFqdn"] = externalOcspServerFqdn;
-                string output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
-                File.WriteAllText(file, output);
+            var json = File.ReadAllText(file);
+            dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+            jsonObj["ProxySettings"]["host"] = proxyAddressFqdn;
+            jsonObj["ProxySettings"]["port"] = proxyAddressPort;
+            jsonObj["ProxySettings"]["excludes"] = proxyAddressExcludes;
+            jsonObj["ExternalOcspServerFqdn"] = externalOcspServerFqdn;
+            var output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
+            File.WriteAllText(file, output);
                 
-                Console.WriteLine("--> Setting cmdline proxy");
-                Helper.SetEnv("HTTP_PROXY", proxyAddress);
-                Helper.SetEnv("HTTPS_PROXY", proxyAddress);
-                Helper.SetEnv("FTP_PROXY", proxyAddress);
-                Helper.SetEnv("NO_PROXY", proxyAddressExcludes);
-            }
+            Console.WriteLine("--> Setting cmdline proxy");
+            Helper.SetEnv("HTTP_PROXY", proxyAddress);
+            Helper.SetEnv("HTTPS_PROXY", proxyAddress);
+            Helper.SetEnv("FTP_PROXY", proxyAddress);
+            Helper.SetEnv("NO_PROXY", proxyAddressExcludes);
         }
 
         private static void InstallDeps() {
@@ -232,10 +237,10 @@ namespace BeameWindowsInstaller
         private static bool InstallGit()
         {
             Console.WriteLine("Installing Git...");
-            bool result = true;
+            var result = true;
 
             //check for GIT and install it if necessary
-            string gitPath = Path.Combine(progFolder, "Git");
+            var gitPath = Path.Combine(progFolder, "Git");
             if (!Directory.Exists(gitPath) || !File.Exists(Path.Combine(gitPath, @"bin\git.exe")))
             {
                 string exePath = Path.Combine(Path.GetTempPath(), gitInstaller);
@@ -252,7 +257,7 @@ namespace BeameWindowsInstaller
             // set git proxy if defined
             if (!string.IsNullOrWhiteSpace(proxyAddress))
             {                
-                string gitcmd = Path.Combine(gitPath, @"bin\git.exe");
+                var gitcmd = Path.Combine(gitPath, @"bin\git.exe");
                 Helper.StartAndCheckReturn(gitcmd, "config --global http.proxy " + proxyAddress);
                 Helper.StartAndCheckReturn(gitcmd, "config --global https.proxy " + proxyAddress);
             }
@@ -262,12 +267,13 @@ namespace BeameWindowsInstaller
         private static bool InstallNode()
         {
             Console.WriteLine("Installing NodeJS...");
-            bool result = true;
-            string msiPath = Path.Combine(Path.GetTempPath(), "nodeJS.msi");
+            var result = true;
+            var msiPath = Path.Combine(Path.GetTempPath(), "nodeJS.msi");
 
             try
             {
-                string nodeJSPath = Path.Combine(progFolder, "nodejs");
+                var nodeJSPath = Path.Combine(progFolder, "nodejs");
+                var npmPath = Path.Combine(nodeJSPath, "npm.cmd");
 
                 //check if NPM and node.exe exist
                 if (File.Exists(Path.Combine(nodeJSPath, "npm.cmd")) && File.Exists(Path.Combine(nodeJSPath, "node.exe")))
@@ -279,23 +285,25 @@ namespace BeameWindowsInstaller
                     Helper.WriteResourceToFile(nodeInstaller, msiPath);
                     result = Helper.StartAndCheckReturn("msiexec", "/i " + msiPath + " /quiet /qn /norestart");
                     Console.WriteLine("NodeJS installation " + (result ? "suceeded" : "failed"));
+                    
+                    Helper.AddToPath(nodeJSPath);
+                    Helper.AddToPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"npm\"));
+
+                    if (result)
+                    {
+                        Console.WriteLine("Updating npm packages");
+                        
+                        //run NPM upgrade
+                        result = Helper.StartAndCheckReturn(npmPath, "install -g npm@latest")
+                                 && Helper.StartAndCheckReturn(npmPath, "install -g --production --add-python-to-path='true' windows-build-tools");
+                    }
                 }
 
-                if (result)
+                // set npm proxy if defined
+                if (!string.IsNullOrWhiteSpace(proxyAddress))
                 {
-                    Console.WriteLine("Updating npm packages");
-                    string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
-
-                    // set npm proxy if defined
-                    if (!string.IsNullOrWhiteSpace(proxyAddress))
-                    {
-                        Helper.StartAndCheckReturn(npmPath, "config set proxy " + proxyAddress);
-                        Helper.StartAndCheckReturn(npmPath, "config set https-proxy " + proxyAddress);
-                    }
-
-                    //run NPM upgrade
-                    result = Helper.StartAndCheckReturn(npmPath, "install -g npm@latest")
-                             && Helper.StartAndCheckReturn(npmPath, "install -g --production --add-python-to-path='true' windows-build-tools");
+                    Helper.StartAndCheckReturn(npmPath, "config set proxy " + proxyAddress);
+                    Helper.StartAndCheckReturn(npmPath, "config set https-proxy " + proxyAddress);
                 }
             }
             catch (Exception ex)
@@ -322,7 +330,7 @@ namespace BeameWindowsInstaller
                     Directory.CreateDirectory(openSSLPath);
                 }
                 
-                string openSSLFile = Path.Combine(openSSLPath, @"bin\openssl.exe");
+                var openSSLFile = Path.Combine(openSSLPath, @"bin\openssl.exe");
                 if (File.Exists(openSSLFile))
                 {
                     Console.WriteLine("Already exists...");
@@ -334,7 +342,7 @@ namespace BeameWindowsInstaller
 
                     Console.WriteLine("extracting files...");
                     ZipFile.ExtractToDirectory(tmpPath, @"c:\");
-                    Environment.SetEnvironmentVariable("OPENSSL_CONF", Path.Combine(openSSLPath, @"ssl\openssl.cnf"), EnvironmentVariableTarget.Machine);
+                    Helper.SetEnv("OPENSSL_CONF", Path.Combine(openSSLPath, @"ssl\openssl.cnf"));
                 }
 
                 Console.WriteLine("OK");

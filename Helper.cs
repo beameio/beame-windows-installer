@@ -7,9 +7,22 @@ namespace BeameWindowsInstaller
 {
     public static class Helper
     {
-        public static void SetEnv(string name, string value) 
+        public static void AddToPath(string path)
         {
-            Environment.SetEnvironmentVariable(name, value, EnvironmentVariableTarget.Machine);
+            var varPath = GetEnv("Path");
+            if (varPath.Contains(path)) return;
+            
+            varPath += @";" + @path;
+            SetEnv("Path", varPath);
+        }
+
+        public static string GetEnv(string name, EnvironmentVariableTarget target = EnvironmentVariableTarget.Machine) 
+        {
+            return Environment.GetEnvironmentVariable(name, target);
+        }
+        public static void SetEnv(string name, string value, EnvironmentVariableTarget target = EnvironmentVariableTarget.Machine) 
+        {
+            Environment.SetEnvironmentVariable(name, value, target);
         }
         
         public static void WriteResourceToFile(string resourceName, string fileName)
