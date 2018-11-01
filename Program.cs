@@ -15,6 +15,8 @@ namespace BeameWindowsInstaller
         const string nodeInstaller = "node-v8.12.0-x64.msi";
 
         static readonly string openSSLPath = ConfigurationManager.AppSettings["OpenSSLPath"];
+        static readonly string gatekeeperName = ConfigurationManager.AppSettings["GatekeeperName"];
+        static readonly string gatekeeperMode = ConfigurationManager.AppSettings["GatekeeperMode"];
         static readonly string proxyAddressProtocol = ConfigurationManager.AppSettings["ProxyAddressProtocol"];
         static readonly string proxyAddressFqdn = ConfigurationManager.AppSettings["ProxyAddressFqdn"];
         static readonly string proxyAddressPort = ConfigurationManager.AppSettings["ProxyAddressPort"];
@@ -138,7 +140,10 @@ namespace BeameWindowsInstaller
                 Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
             }
 
-            
+            Console.WriteLine("--> creating windows service");
+            Helper.StartAndCheckReturn("sc.exe", "delete \"Beame Gatekeeper\"");
+            Helper.StartAndCheckReturn("sc.exe", "create \"Beame Gatekeeper\" binpath= \"\"" + Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"npm\beame-gatekeeper.cmd") + "\" server start\" start= auto");
+
             if (!string.IsNullOrWhiteSpace(customGatekeeper))
             {
                 // If custom gatekeeper remove gatekeeper directory and add custom one
@@ -167,18 +172,36 @@ namespace BeameWindowsInstaller
                 Console.WriteLine("--> Installing custom Beame.io Gatekeeper");
 
                 // Make install and gulp if any custom was applied
-                Helper.StartAndCheckReturn(npmPath, "install", false, "", 10, gatekeeperPath);
-                Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js sass web_sass compile", false, "", 10, gatekeeperPath);
+                result = result && Helper.StartAndCheckReturn(npmPath, "install", false, "", 10, gatekeeperPath) &&
+                         Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js sass web_sass compile", false, "", 10, gatekeeperPath);
             }
 
-            AddProxySettingsToBeame();
-            
-            Console.WriteLine("--> creating windows service");
-            Helper.StartAndCheckReturn("sc.exe", "create \"Beame Gatekeeper\" binpath= \"\"" + Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"npm\beame-gatekeeper.cmd") + "\" server start\" start= auto");
-           
+            ChangeGatekeeperSettings();
             return result;
         }
 
+        private static void ChangeGatekeeperSettings()
+        {
+            var file = Path.Combine(homeFolder, @".beame_server\config\app_config.json");
+
+            Console.WriteLine("--> Changing settings in gatekeeper file " + file);
+            var json = File.ReadAllText(file);
+            dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+            jsonObj["ServiceName"] = gatekeeperName;
+            jsonObj["EnvMode"] = gatekeeperMode;
+            jsonObj["HtmlEnvMode"] = "Prod";
+            jsonObj["EncryptUserData"] = true;
+            jsonObj["ShowZendeskSupport"] = false;
+            if (!string.IsNullOrWhiteSpace(proxyAddress))
+            {
+                jsonObj["ProxySettings"]["host"] = proxyAddressFqdn;
+                jsonObj["ProxySettings"]["port"] = proxyAddressPort;
+                jsonObj["ProxySettings"]["excludes"] = proxyAddressExcludes;
+                jsonObj["ExternalOcspServerFqdn"] = externalOcspServerFqdn;
+            }
+            var output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
+            File.WriteAllText(file, output);
+        }
 
         private static bool InstallBeameSDK()
         {
@@ -198,40 +221,24 @@ namespace BeameWindowsInstaller
                 Console.WriteLine("Beame.io SDK installation failed - {0}", ex.Message);
             }
 
-            AddProxySettingsToBeame();
             return result;
         }
-
-        private static void AddProxySettingsToBeame()
-        {
-            // set git proxy
-            if (string.IsNullOrWhiteSpace(proxyAddress)) return;
-            
-            var file = Path.Combine(homeFolder, @".beame_server\config\app_config.json");
-            Console.WriteLine("--> Changing proxy settings in file " + file);
-
-            var json = File.ReadAllText(file);
-            dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
-            jsonObj["ProxySettings"]["host"] = proxyAddressFqdn;
-            jsonObj["ProxySettings"]["port"] = proxyAddressPort;
-            jsonObj["ProxySettings"]["excludes"] = proxyAddressExcludes;
-            jsonObj["ExternalOcspServerFqdn"] = externalOcspServerFqdn;
-            var output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
-            File.WriteAllText(file, output);
-                
-            Console.WriteLine("--> Setting cmdline proxy");
-            Helper.SetEnv("HTTP_PROXY", proxyAddress);
-            Helper.SetEnv("HTTPS_PROXY", proxyAddress);
-            Helper.SetEnv("FTP_PROXY", proxyAddress);
-            Helper.SetEnv("NO_PROXY", proxyAddressExcludes);
-        }
-
+        
         #region dependencies
         private static void InstallDeps() {
             if (!InstallOpenSSL() || !InstallGit() || !InstallNode())
             {
                 Console.ReadLine();
                 Environment.Exit(Environment.ExitCode);
+            }
+
+            // set env proxy
+            if (!string.IsNullOrWhiteSpace(proxyAddress)) {
+                Console.WriteLine("--> Setting cmdline proxy");
+                Helper.SetEnv("HTTP_PROXY", proxyAddress);
+                Helper.SetEnv("HTTPS_PROXY", proxyAddress);
+                Helper.SetEnv("FTP_PROXY", proxyAddress);
+                Helper.SetEnv("NO_PROXY", proxyAddressExcludes);
             }
         }
         
