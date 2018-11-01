@@ -134,16 +134,17 @@ namespace BeameWindowsInstaller
                 //add GIT to path before starting this installation, in case GIT was just recently installed
                 result = Helper.StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, @"C:\Program Files\Git\cmd");
                 Console.WriteLine("Beame.io Gatekeeper installation " + (result ? "suceeded" : "failed"));
+
+                Console.WriteLine("--> creating windows service");
+                Helper.StartAndCheckReturn("sc.exe", "delete \"Beame Gatekeeper\"");
+                Helper.StartAndCheckReturn("sc.exe", "create \"Beame Gatekeeper\" binpath= \"\"" + Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"npm\beame-gatekeeper.cmd") + "\" server start\" start= auto");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
             }
 
-            Console.WriteLine("--> creating windows service");
-            Helper.StartAndCheckReturn("sc.exe", "delete \"Beame Gatekeeper\"");
-            Helper.StartAndCheckReturn("sc.exe", "create \"Beame Gatekeeper\" binpath= \"\"" + Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"npm\beame-gatekeeper.cmd") + "\" server start\" start= auto");
-
+            
             if (!string.IsNullOrWhiteSpace(customGatekeeper))
             {
                 // If custom gatekeeper remove gatekeeper directory and add custom one

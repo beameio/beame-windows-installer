@@ -12,6 +12,12 @@ All values are text fields
 * OpenSSLPath
     Path in the local machine to install the openssl in.
 
+* GatekeeperName
+    Name of the gatekeeper, will identify the gatekeeper in the mobile app and ui. e.g Beame Gatekeeper
+    
+* GatekeeperMode
+    Type of gatekeeper to install. Can be Gatekeeper  or  CentralLogin
+
 * ProxyAddressProtocol
     Protocol of the proxy connection (http or https)
 * ProxyAddressFqdn
