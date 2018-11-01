@@ -38,7 +38,7 @@ All values are text fields
 * CustomGatekeeper
 
     Local path to the custom gatekeeper. The file needs to be a zip with the gatekeeper folder structure.
-    When this property is not empty, after the installation of the released gatekeeper, this file will override the installed gatekeeper with the contained files.
+    When this property is not empty, this file will be used for the installation of the beame-gatekeeper.
 * CustomGatekeeperCSS
 
     Local path to the custom gatekeeper css. The file needs to be a zip with the gatekeeper folder structure.

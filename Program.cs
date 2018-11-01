@@ -142,19 +142,20 @@ namespace BeameWindowsInstaller
 
             var gatekeeperPath = Path.Combine(appDataFolder, @"npm\node_modules\beame-gatekeeper");
 
-            try
+            if (string.IsNullOrWhiteSpace(customGatekeeper))
             {
-                //add GIT to path before starting this installation, in case GIT was just recently installed
-                result = Helper.StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, @"C:\Program Files\Git\cmd");
-                Console.WriteLine("Beame.io Gatekeeper installation " + (result ? "suceeded" : "failed"));
+                try
+                {
+                    //add GIT to path before starting this installation, in case GIT was just recently installed
+                    result = Helper.StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, @"C:\Program Files\Git\cmd");
+                    Console.WriteLine("Beame.io Gatekeeper installation " + (result ? "suceeded" : "failed"));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
+                }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Beame.io Gatekeeper installation failed - {0}", ex.Message);
-            }
-
-            
-            if (!string.IsNullOrWhiteSpace(customGatekeeper))
+            else
             {
                 // If custom gatekeeper remove gatekeeper directory and add custom one
                 Console.WriteLine("--> Installing custom Beame.io Gatekeeper from " + customGatekeeper);
@@ -163,7 +164,16 @@ namespace BeameWindowsInstaller
                     var dir = new DirectoryInfo(gatekeeperPath);
                     dir.Delete(true);
                 }
-                ZipFile.ExtractToDirectory(customGatekeeper, gatekeeperPath);
+
+                var customGatekeeperFolder = Path.Combine(progFolder, "beame-gatekeeper");
+                if (Directory.Exists(customGatekeeperFolder))
+                {
+                    var dir = new DirectoryInfo(customGatekeeperFolder);
+                    dir.Delete(true);
+                }
+
+                ZipFile.ExtractToDirectory(customGatekeeper, customGatekeeperFolder);
+                result = Helper.StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", false, @"C:\Program Files\Git\cmd", 600, progFolder);
             }
 
             if (!string.IsNullOrWhiteSpace(customGatekeeperCSS))
@@ -182,8 +192,8 @@ namespace BeameWindowsInstaller
                 Console.WriteLine("--> Installing custom Beame.io Gatekeeper");
 
                 // Make install and gulp if any custom was applied
-                result = result && Helper.StartAndCheckReturn(npmPath, "install", false, "", 600, gatekeeperPath) &&
-                         Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js sass web_sass compile", false, "", 600, gatekeeperPath);
+                result = result && Helper.StartAndCheckReturn(npmPath, "install", false, @"C:\Program Files\Git\cmd", 600, gatekeeperPath) &&
+                         Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js sass web_sass compile", false, @"C:\Program Files\Git\cmd", 600, gatekeeperPath);
             }
 
             ChangeGatekeeperSettings();
@@ -208,8 +218,7 @@ namespace BeameWindowsInstaller
             // if configs dont exist, initialize them
             if (!Directory.Exists(path))
             {
-                Helper.StartAndCheckReturn(
-                    Path.Combine(appDataFolder, @"npm\beame-gatekeeper.cmd"), "server config", false, "", 20);
+                Helper.StartAndCheckReturn(Path.Combine(appDataFolder, @"npm\beame-gatekeeper.cmd"), "server config", false, Path.Combine(progFolder, "nodejs"), 20);
             }
 
             Console.WriteLine("--> Changing settings in gatekeeper file " + file);
@@ -346,7 +355,7 @@ namespace BeameWindowsInstaller
                     Console.WriteLine("NodeJS installation " + (result ? "suceeded" : "failed"));
 
                     Helper.AddToPath(nodeJSPath);
-                    Helper.AddToPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"npm\"));
+                    Helper.AddToPath(Path.Combine(appDataFolder, @"npm\"));
                 }
 
                 if (result)
