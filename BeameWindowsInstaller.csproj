@@ -94,6 +94,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="README.md" />
+    <EmbeddedResource Include="Resources\nssm.exe" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
