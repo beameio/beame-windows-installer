@@ -5,7 +5,6 @@ using System.IO.Compression;
 using System.Configuration;
 using System.Security.Principal;
 using System.Linq;
-using System.Security.AccessControl;
 
 namespace BeameWindowsInstaller
 {
@@ -227,6 +226,7 @@ namespace BeameWindowsInstaller
             Helper.SetEnv("NO_PROXY", proxyAddressExcludes);
         }
 
+        #region dependencies
         private static void InstallDeps() {
             if (!InstallOpenSSL() || !InstallGit() || !InstallNode())
             {
@@ -234,6 +234,7 @@ namespace BeameWindowsInstaller
                 Environment.Exit(Environment.ExitCode);
             }
         }
+        
         private static bool InstallGit()
         {
             Console.WriteLine("Installing Git...");
@@ -241,12 +242,14 @@ namespace BeameWindowsInstaller
 
             //check for GIT and install it if necessary
             var gitPath = Path.Combine(progFolder, "Git");
-            if (!Directory.Exists(gitPath) || !File.Exists(Path.Combine(gitPath, @"bin\git.exe")))
+            var gitcmd = Path.Combine(gitPath, @"cmd\git.exe");
+            if (!Directory.Exists(gitPath) || !File.Exists(gitcmd))
             {
                 string exePath = Path.Combine(Path.GetTempPath(), gitInstaller);
                 Helper.WriteResourceToFile(gitInstaller, exePath);
 
                 result = Helper.StartAndCheckReturn(exePath, "/VERYSILENT /CLOSEAPPLICATIONS /NORESTART");
+                Helper.AddToPath(Path.Combine(gitPath, @"cmd"));
                 Console.WriteLine("Git installation " + (result ? "suceeded" : "failed"));
             }
             else
@@ -256,8 +259,7 @@ namespace BeameWindowsInstaller
 
             // set git proxy if defined
             if (!string.IsNullOrWhiteSpace(proxyAddress))
-            {                
-                var gitcmd = Path.Combine(gitPath, @"bin\git.exe");
+            {
                 Helper.StartAndCheckReturn(gitcmd, "config --global http.proxy " + proxyAddress);
                 Helper.StartAndCheckReturn(gitcmd, "config --global https.proxy " + proxyAddress);
             }
@@ -303,7 +305,8 @@ namespace BeameWindowsInstaller
                         
                     //run NPM upgrade
                     result = Helper.StartAndCheckReturn(npmPath, "install -g npm@latest")
-                             && Helper.StartAndCheckReturn(npmPath, "install -g --production --add-python-to-path='true' windows-build-tools");
+                             && Helper.StartAndCheckReturn(npmPath, "install -g node-gyp") 
+                             && Helper.StartAndCheckReturn(npmPath, "install -g --production --scripts-prepend-node-path=true --add-python-to-path='true' windows-build-tools");
                 }
             }
             catch (Exception ex)
@@ -315,7 +318,6 @@ namespace BeameWindowsInstaller
             {
                 Helper.RemoveFile(msiPath);
             }
-
             return result;
         }
 
@@ -354,5 +356,6 @@ namespace BeameWindowsInstaller
                 return false;
             }
         }
+        #endregion
     }
 }
