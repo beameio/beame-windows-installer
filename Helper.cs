@@ -1,6 +1,8 @@
 using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 namespace BeameWindowsInstaller
@@ -84,6 +86,19 @@ namespace BeameWindowsInstaller
             }
             catch
             { }
+        }
+
+        public static TC GetConfigurationValue<TC>(string property, TC defvalue)
+        {
+            if (ConfigurationManager.AppSettings.AllKeys.Any(x => x.Equals(property)))
+            {
+                try
+                {
+                    return (TC) ConfigurationManager.AppSettings[property].Cast<TC>();
+                }
+                catch{}
+            }
+            return  defvalue;
         }
     }
 }

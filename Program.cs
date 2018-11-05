@@ -10,31 +10,37 @@ namespace BeameWindowsInstaller
 {
     static class Program
     {
-        static readonly string progFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        static readonly string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        static readonly string appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        
-        const string openSSLInstaller = "OpenSSL-Win64.zip";
-        const string gitInstaller = "Git-2.11.0-64-bit.exe";
-        const string nodeInstaller = "node-v8.12.0-x64.msi";
-        const string nssmInstaller = "nssm.exe";
+        private const string openSSLInstaller = "OpenSSL-Win64.zip";
+        private const string gitInstaller = "Git-2.11.0-64-bit.exe";
+        private const string nodeInstaller = "node-v8.12.0-x64.msi";
+        private const string nssmInstaller = "nssm.exe";
 
-        static readonly string nssmPath = Path.Combine(progFolder, "nssm");
-        static readonly string nssmFile = Path.Combine(nssmPath, nssmInstaller);
+        private static readonly string progFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        private static readonly string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        private static readonly string appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         
-        static readonly string gatekeeperName = ConfigurationManager.AppSettings["GatekeeperName"];
-        static readonly string gatekeeperMode = ConfigurationManager.AppSettings["GatekeeperMode"];
-        static readonly string proxyAddressProtocol = ConfigurationManager.AppSettings["ProxyAddressProtocol"];
-        static readonly string proxyAddressFqdn = ConfigurationManager.AppSettings["ProxyAddressFqdn"];
-        static readonly string proxyAddressPort = ConfigurationManager.AppSettings["ProxyAddressPort"];
-        static readonly string proxyAddressExcludes = ConfigurationManager.AppSettings["ProxyAddressExcludes"];
-        static readonly string externalOcspServerFqdn = ConfigurationManager.AppSettings["ExternalOcspServerFqdn"];
-        static readonly string proxyAddress = string.IsNullOrWhiteSpace(proxyAddressFqdn) 
+        private static readonly string nssmPath = Path.Combine(progFolder, "nssm");
+        private static readonly string nssmFile = Path.Combine(nssmPath, nssmInstaller);
+        
+        private static readonly string gatekeeperName = Helper.GetConfigurationValue("GatekeeperName", "Beame Gatekeeper");
+        private static readonly string gatekeeperMode = Helper.GetConfigurationValue("GatekeeperMode", "Gatekeeper");
+
+        private static readonly bool encryptUserData = Helper.GetConfigurationValue("EncryptUserData", false);
+        private static readonly bool allowDirectSignin = Helper.GetConfigurationValue("AllowDirectSignin", true);
+        private static readonly bool publicRegistration = Helper.GetConfigurationValue("PublicRegistration", false);
+        private static readonly bool registrationImageRequired = Helper.GetConfigurationValue("RegistrationImageRequired", false);
+
+        private static readonly string proxyAddressProtocol = Helper.GetConfigurationValue("ProxyAddressProtocol", "");
+        private static readonly string proxyAddressFqdn = Helper.GetConfigurationValue("ProxyAddressFqdn", "");
+        private static readonly string proxyAddressPort = Helper.GetConfigurationValue("ProxyAddressPort", "");
+        private static readonly string proxyAddressExcludes = Helper.GetConfigurationValue("ProxyAddressExcludes", "");
+        private static readonly string externalOcspServerFqdn = Helper.GetConfigurationValue("ExternalOcspServerFqdn", "");
+        private static readonly string proxyAddress = string.IsNullOrWhiteSpace(proxyAddressFqdn) 
                 ? "" 
                 : proxyAddressProtocol + "://" +  proxyAddressFqdn + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort);
 
-        static readonly string customGatekeeper = ConfigurationManager.AppSettings["CustomGatekeeper"];
-        static readonly string customGatekeeperCSS = ConfigurationManager.AppSettings["CustomGatekeeperCSS"];
+        private static readonly string customGatekeeper = Helper.GetConfigurationValue("CustomGatekeeper", "");
+        private static readonly string customGatekeeperCSS = Helper.GetConfigurationValue("CustomGatekeeperCSS","");
         
         static readonly string windowsServiceGatekeeperName = "Beame Gatekeeper";
 
@@ -45,7 +51,6 @@ namespace BeameWindowsInstaller
             Dependencies = 7,
             Exit = 9
         }
-        
         
         static void Main(string[] args)
         {
@@ -227,8 +232,13 @@ namespace BeameWindowsInstaller
             jsonObj["ServiceName"] = gatekeeperName;
             jsonObj["EnvMode"] = gatekeeperMode;
             jsonObj["HtmlEnvMode"] = "Prod";
-            jsonObj["EncryptUserData"] = true;
+            
+            jsonObj["EncryptUserData"] = encryptUserData;
+            jsonObj["AllowDirectSignin"] = allowDirectSignin;
+            jsonObj["PublicRegistration"] = publicRegistration;
+            jsonObj["RegistrationImageRequired"] = registrationImageRequired;
             jsonObj["ShowZendeskSupport"] = false;
+            
             if (!string.IsNullOrWhiteSpace(proxyAddress))
             {
                 jsonObj["ProxySettings"]["host"] = proxyAddressFqdn;
