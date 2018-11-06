@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.27703.2035
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeameWindowsInstaller", "BeameWindowsInstaller.csproj", "{45A86B3D-A3AC-4959-9C45-B6024DE87E82}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeameWindowsInstallerTests", "BeameWindowsInstallerTests\BeameWindowsInstallerTests.csproj", "{1974C1FC-5EDE-4403-939B-01B4A52CC953}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{45A86B3D-A3AC-4959-9C45-B6024DE87E82}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{45A86B3D-A3AC-4959-9C45-B6024DE87E82}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{45A86B3D-A3AC-4959-9C45-B6024DE87E82}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1974C1FC-5EDE-4403-939B-01B4A52CC953}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1974C1FC-5EDE-4403-939B-01B4A52CC953}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1974C1FC-5EDE-4403-939B-01B4A52CC953}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1974C1FC-5EDE-4403-939B-01B4A52CC953}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

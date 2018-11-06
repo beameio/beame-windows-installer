@@ -88,13 +88,26 @@ namespace BeameWindowsInstaller
             { }
         }
 
-        public static TC GetConfigurationValue<TC>(string property, TC defvalue)
+        public static string GetConfigurationValue(string property, string defvalue)
         {
             if (ConfigurationManager.AppSettings.AllKeys.Any(x => x.Equals(property)))
             {
                 try
                 {
-                    return (TC) ConfigurationManager.AppSettings[property].Cast<TC>();
+                    return ConfigurationManager.AppSettings[property];
+                }
+                catch{}
+            }
+            return  defvalue;
+        }
+        
+        public static bool GetConfigurationValue(string property, bool defvalue)
+        {
+            if (ConfigurationManager.AppSettings.AllKeys.Any(x => x.Equals(property)))
+            {
+                try
+                {
+                    return bool.Parse(ConfigurationManager.AppSettings[property]);
                 }
                 catch{}
             }
