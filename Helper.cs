@@ -88,7 +88,7 @@ namespace BeameWindowsInstaller
             { }
         }
 
-        public static string GetConfigurationValue(string property, string defvalue)
+        public static string GetConfigurationValue(string property, string defvalue = "")
         {
             if (ConfigurationManager.AppSettings.AllKeys.Any(x => x.Equals(property)))
             {

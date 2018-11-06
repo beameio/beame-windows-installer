@@ -30,17 +30,17 @@ namespace BeameWindowsInstaller
         private static readonly bool publicRegistration = Helper.GetConfigurationValue("PublicRegistration", false);
         private static readonly bool registrationImageRequired = Helper.GetConfigurationValue("RegistrationImageRequired", false);
 
-        private static readonly string proxyAddressProtocol = Helper.GetConfigurationValue("ProxyAddressProtocol", "");
-        private static readonly string proxyAddressFqdn = Helper.GetConfigurationValue("ProxyAddressFqdn", "");
-        private static readonly string proxyAddressPort = Helper.GetConfigurationValue("ProxyAddressPort", "");
-        private static readonly string proxyAddressExcludes = Helper.GetConfigurationValue("ProxyAddressExcludes", "");
-        private static readonly string externalOcspServerFqdn = Helper.GetConfigurationValue("ExternalOcspServerFqdn", "");
+        private static readonly string proxyAddressProtocol = Helper.GetConfigurationValue("ProxyAddressProtocol");
+        private static readonly string proxyAddressFqdn = Helper.GetConfigurationValue("ProxyAddressFqdn");
+        private static readonly string proxyAddressPort = Helper.GetConfigurationValue("ProxyAddressPort");
+        private static readonly string proxyAddressExcludes = Helper.GetConfigurationValue("ProxyAddressExcludes");
+        private static readonly string externalOcspServerFqdn = Helper.GetConfigurationValue("ExternalOcspServerFqdn");
         private static readonly string proxyAddress = string.IsNullOrWhiteSpace(proxyAddressFqdn) 
                 ? "" 
                 : proxyAddressProtocol + "://" +  proxyAddressFqdn + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort);
 
-        private static readonly string customGatekeeper = Helper.GetConfigurationValue("CustomGatekeeper", "");
-        private static readonly string customGatekeeperCSS = Helper.GetConfigurationValue("CustomGatekeeperCSS","");
+        private static readonly string customGatekeeper = Helper.GetConfigurationValue("CustomGatekeeper");
+        private static readonly string customGatekeeperCSS = Helper.GetConfigurationValue("CustomGatekeeperCSS");
         
         static readonly string windowsServiceGatekeeperName = "Beame Gatekeeper";
 
