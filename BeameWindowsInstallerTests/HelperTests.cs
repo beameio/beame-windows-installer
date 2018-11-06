@@ -7,6 +7,21 @@ namespace BeameWindowsInstallerTests
     public class Tests
     {
         [Test]
+        public void GetConfigurationValue_ExistingString_Test()
+        {
+            var rr = Helper.GetConfigurationValue("TestString", "Hello");
+            Assert.AreEqual(rr, "Gatekeeper");
+        }
+        
+        [Test]
+        public void GetConfigurationValue_DefaultString_Test()
+        {
+            var rr = Helper.GetConfigurationValue("dsadas", "Hello");
+            Assert.AreEqual(rr, "Hello");
+        }
+
+        
+        [Test]
         public void GetConfigurationValue_ExistingTrue_Test()
         {
             var rr = Helper.GetConfigurationValue("TestBoolTrue", false);
