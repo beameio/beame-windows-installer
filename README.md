@@ -8,7 +8,7 @@ This setup was designed to run on a windows 64 bits machine running .net framewo
 
 The executable has to be run with Administrator permissions. If not given, it'll warn about the fact and exit.
 
-### Interactively
+### Interactive
 In interactive mode, it'll display a menu with the available installation options
 Currently they are:
 
