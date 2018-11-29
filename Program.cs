@@ -22,22 +22,26 @@ namespace BeameWindowsInstaller
         private static readonly string nssmPath = Path.Combine(progFolder, "nssm");
         private static readonly string nssmFile = Path.Combine(nssmPath, nssmInstaller);
         
-        private static readonly string gatekeeperName = Helper.GetConfigurationValue("GatekeeperName", "Beame Gatekeeper");
-        private static readonly string gatekeeperMode = Helper.GetConfigurationValue("GatekeeperMode", "Gatekeeper");
-
-        private static readonly bool encryptUserData = Helper.GetConfigurationValue("EncryptUserData", false);
-        private static readonly bool allowDirectSignin = Helper.GetConfigurationValue("AllowDirectSignin", true);
-        private static readonly bool publicRegistration = Helper.GetConfigurationValue("PublicRegistration", false);
-        private static readonly bool registrationImageRequired = Helper.GetConfigurationValue("RegistrationImageRequired", false);
-
         private static readonly string proxyAddressProtocol = Helper.GetConfigurationValue("ProxyAddressProtocol");
         private static readonly string proxyAddressFqdn = Helper.GetConfigurationValue("ProxyAddressFqdn");
         private static readonly string proxyAddressPort = Helper.GetConfigurationValue("ProxyAddressPort");
         private static readonly string proxyAddressExcludes = Helper.GetConfigurationValue("ProxyAddressExcludes");
         private static readonly string externalOcspServerFqdn = Helper.GetConfigurationValue("ExternalOcspServerFqdn");
         private static readonly string proxyAddress = string.IsNullOrWhiteSpace(proxyAddressFqdn) 
-                ? "" 
-                : proxyAddressProtocol + "://" +  proxyAddressFqdn + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort);
+            ? "" 
+            : proxyAddressProtocol + "://" +  proxyAddressFqdn + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort);
+
+        private static readonly string gatekeeperName = Helper.GetConfigurationValue("GatekeeperName", "Beame Gatekeeper");
+        private static readonly string gatekeeperMode = Helper.GetConfigurationValue("GatekeeperMode", "Gatekeeper");
+        private static readonly bool encryptUserData = Helper.GetConfigurationValue("EncryptUserData", true);
+        private static readonly bool allowDirectSignin = Helper.GetConfigurationValue("AllowDirectSignin", true);
+        private static readonly bool publicRegistration = Helper.GetConfigurationValue("PublicRegistration", false);
+        private static readonly bool registrationImageRequired = Helper.GetConfigurationValue("RegistrationImageRequired", false);
+        private static readonly bool allowSignInWithCreds = Helper.GetConfigurationValue("AllowSignInWithCreds", true);
+        private static readonly bool allowSignInWithUltrasound = Helper.GetConfigurationValue("AllowSignInWithUltrasound", true);
+        private static readonly bool disableDemoServers = Helper.GetConfigurationValue("DisableDemoServers", false);
+        private static readonly bool advanceSettingsEnabled = Helper.GetConfigurationValue("AdvanceSettingsEnabled", false);
+        private static readonly bool showZendeskSupport = Helper.GetConfigurationValue("ShowZendeskSupport", false);
 
         private static readonly string customGatekeeper = Helper.GetConfigurationValue("CustomGatekeeper");
         private static readonly string customGatekeeperCSS = Helper.GetConfigurationValue("CustomGatekeeperCSS");
@@ -237,7 +241,11 @@ namespace BeameWindowsInstaller
             jsonObj["AllowDirectSignin"] = allowDirectSignin;
             jsonObj["PublicRegistration"] = publicRegistration;
             jsonObj["RegistrationImageRequired"] = registrationImageRequired;
-            jsonObj["ShowZendeskSupport"] = false;
+            jsonObj["AllowSignInWithCreds"] = allowSignInWithCreds;
+            jsonObj["AllowSignInWithUltrasound"] = allowSignInWithUltrasound;
+            jsonObj["DisableDemoServers"] = disableDemoServers;
+            jsonObj["AdvanceSettingsEnabled"] = advanceSettingsEnabled;
+            jsonObj["ShowZendeskSupport"] = showZendeskSupport;
             
             if (!string.IsNullOrWhiteSpace(proxyAddress))
             {

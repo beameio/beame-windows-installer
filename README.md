@@ -33,7 +33,33 @@ To do so, add the properties as `<add key="GatekeeperName" value="Beame Gatekeep
 
 Please not that all values are text fields
 
-### Available settings
+### Proxy settings
+
+* ProxyAddressProtocol
+
+    Protocol of the proxy connection (`http` or `https`)
+    
+* ProxyAddressFqdn
+
+    Proxy fqdn to use. Empty means no proxy
+    
+* ProxyAddressPort
+
+    Proxy port to use
+    
+* ProxyAddressExcludes
+
+    Addresses that ignore proxy settings (e.g. local network) separated by a ','
+    Wildcard * can be used.
+    e.g: `127.0.0.1,localhost,10.*`
+    
+* ExternalOcspServerFqdn
+
+    Beame external Oscp server that also allows the communication of ntp. Required in case of proxy.
+    e.g: `iep9bs1p7cj3cmit.tl5h1ipgobrdqsj6.v1.p.beameio.net`
+    
+### Gatekeeper settings
+
 * GatekeeperName
 
     Name of the gatekeeper, will identify the gatekeeper in the mobile app and ui. e.g `Beame Gatekeeper`
@@ -43,43 +69,47 @@ Please not that all values are text fields
 
 * EncryptUserData
 
-    Configures gatekeeper option to encrypt user data. Can be `true` or `false` 
+    Configures gatekeeper option to encrypt user data. Can be `true` or `false`. Default is `true` 
 
 * AllowDirectSignin
 
-    Configures gatekeeper option to allow direct login from the mobile phone (no need for a browser). Can be `true` or `false` 
+    Configures gatekeeper option to allow direct login from the mobile phone (no need for a browser). Can be `true` or `false`. Default is `true` 
 
 * PublicRegistration
 
-    Configures gatekeeper option to allow public user registration. Can be `true` or `false` 
+    Configures gatekeeper option to allow public user registration. Can be `true` or `false`. Default is `false`
 
 * RegistrationImageRequired
 
-    Configures gatekeeper option to require registration and login with user photo validation workload. Can be `true` or `false` 
+    Configures gatekeeper option to require registration and login with user photo validation workload. Can be `true` or `false`. Default is `false` 
 
-* ProxyAddressProtocol
+* AllowSignInWithCreds
 
-    Protocol of the proxy connection (`http` or `https`)
-* ProxyAddressFqdn
+    Configures gatekeeper option to show the sign in with client credentials. Can be `true` or `false`. Default is `true`
 
-    Proxy fqdn to use. Empty means no proxy
-* ProxyAddressPort
+* AllowSignInWithUltrasound
 
-    Proxy port to use
-* ProxyAddressExcludes
+    Configures gatekeeper option to show the sign in with ultrasound. Can be `true` or `false`. Default is `true` 
 
-    Addresses that ignore proxy settings (e.g. local network) separated by a ','
-    Wildcard * can be used.
-    e.g: `127.0.0.1,localhost,10.*`
-* ExternalOcspServerFqdn
+* DisableDemoServers
 
-    Beame external Oscp server that also allows the communication of ntp. Required in case of proxy.
-    e.g: `iep9bs1p7cj3cmit.tl5h1ipgobrdqsj6.v1.p.beameio.net`
-    
+    Configures gatekeeper option to disable the demo servers. Can be `true` or `false`. Default is `false`
+
+* AdvanceSettingsEnabled
+
+    Configures gatekeeper option to show the advanced settings on the admin control panel. Can be `true` or `false`. Default is `false`
+
+* ShowZendeskSupport
+
+    Configures gatekeeper option to show the zendesk support. Can be `true` or `false`. Default is `false`
+
+### Gatekeeper customization 
+
 * CustomGatekeeper
 
     Local path to the custom gatekeeper. The file needs to be a zip with the gatekeeper folder structure.
     When this property is not empty, this file will be used for the installation of the beame-gatekeeper.
+    
 * CustomGatekeeperCSS
 
     Local path to the custom gatekeeper css. The file needs to be a zip with the gatekeeper folder structure.
