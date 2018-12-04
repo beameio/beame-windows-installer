@@ -22,6 +22,9 @@ namespace BeameWindowsInstaller
         private static readonly string nssmPath = Path.Combine(progFolder, "nssm");
         private static readonly string nssmFile = Path.Combine(nssmPath, nssmInstaller);
         
+        private static readonly string registerSiteOnFinish = Helper.GetConfigurationValue("RegisterSiteOnFinish");
+        private static readonly bool enableRegisterSiteOnFinish = Helper.GetConfigurationValue("EnableRegisterSiteOnFinish", true);
+        
         private static readonly string proxyAddressProtocol = Helper.GetConfigurationValue("ProxyAddressProtocol");
         private static readonly string proxyAddressFqdn = Helper.GetConfigurationValue("ProxyAddressFqdn");
         private static readonly string proxyAddressPort = Helper.GetConfigurationValue("ProxyAddressPort");
@@ -112,11 +115,18 @@ namespace BeameWindowsInstaller
                 {
                     Console.WriteLine("== Installer finished successfully ==");
                     Console.WriteLine();
-                    Process.Start(opt == InstallerOptions.Gatekeeper ? "https://ypxf72akb6onjvrq.ohkv8odznwh5jpwm.v1.p.beameio.net/gatekeeper" : "https://ypxf72akb6onjvrq.ohkv8odznwh5jpwm.v1.p.beameio.net/");
-                    Console.WriteLine();
-                    Console.WriteLine("Please fill the name and email in the registration form of the opened webpage");
-                    Console.WriteLine("After receiving the instruction email please follow only the last section (\"For Windows...\")");
-                    
+                    if (enableRegisterSiteOnFinish)
+                    {
+                        Process.Start(opt == InstallerOptions.Gatekeeper
+                            ? registerSiteOnFinish + "/gatekeeper"
+                            : registerSiteOnFinish);
+                        Console.WriteLine();
+                        Console.WriteLine(
+                            "Please fill the name and email in the registration form of the opened webpage");
+                        Console.WriteLine(
+                            "After receiving the instruction email please follow only the last section (\"For Windows...\")");
+                    }
+
                     Console.WriteLine();
                     Console.WriteLine("Once the credentials are installed, start the windows service '"+ windowsServiceGatekeeperName +"' or by running 'sc.exe start \"" + windowsServiceGatekeeperName + "\"'");
                     Console.WriteLine();
