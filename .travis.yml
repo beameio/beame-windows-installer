@@ -1,0 +1,4 @@
+language: csharp
+solution: BeameWindowsInstaller.sln
+install:
+  - nuget restore BeameWindowsInstaller.sln
