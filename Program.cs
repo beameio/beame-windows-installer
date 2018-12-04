@@ -71,9 +71,9 @@ namespace BeameWindowsInstaller
             if (principal.IsInRole(WindowsBuiltInRole.Administrator))
             {
                 string selected;
-                if (args.Length > 1)
+                if (args.Length > 0)
                 {
-                    selected = args[1];
+                    selected = args[0];
                 }
                 else
                 {
