@@ -225,6 +225,9 @@ namespace BeameWindowsInstaller
             Console.WriteLine("Please insert current user " +  userName + " password:");
             var password = Console.ReadLine(); 
             Helper.StartAndCheckReturn(nssmFile, "set \"" + windowsServiceGatekeeperName + "\" ObjectName " + userName + " " + password);
+            Helper.StartAndCheckReturn(nssmFile, "set \"" + windowsServiceGatekeeperName + "\" AppDirectory \"" + appDataFolder + "\"");
+            Helper.StartAndCheckReturn(nssmFile, "set \"" + windowsServiceGatekeeperName + "\" Start SERVICE_AUTO_START");
+            Helper.StartAndCheckReturn(nssmFile, "set \"" + windowsServiceGatekeeperName + "\" Description \"Beame Gatekeeper service\"");
 
             return result;
         }
