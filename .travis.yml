@@ -3,7 +3,7 @@ solution: BeameWindowsInstaller.sln
 install:
 - nuget restore BeameWindowsInstaller.sln
 before_deploy:
-- zip "beame-windows-installer-${TRAVIS_TAG}.zip" bin/Release/*
+- zip -j "beame-windows-installer-${TRAVIS_TAG}.zip" bin/Release/*
 deploy:
   provider: releases
   api_key:
