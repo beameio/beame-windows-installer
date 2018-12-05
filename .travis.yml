@@ -1,4 +1,14 @@
 language: csharp
 solution: BeameWindowsInstaller.sln
 install:
-  - nuget restore BeameWindowsInstaller.sln
+- nuget restore BeameWindowsInstaller.sln
+deploy:
+  provider: releases
+  api_key:
+    secure: rCNoDPN8iMeB3xnvjbOGmiNjDqg0E+NZc9XbqqYsPMUprZ6v/igYhu//a11S43/xT9m/JAUawr8qdg/unWYGzvORb4oM2A87n4a0I6qs+pwSRHUby4tdjbZeySuNhaKue1hnGdVTTGO0TIUmnGKHodKW1pZC5A+iyGDRFbcDqJf9Nro/TLUCict/LkAjBuuUKNJprIMnca0wBeB1jVmOMY5pcIZoUrOCBYepwJsCbAZYL+OGqa+IfA8hFsF0VluziQvyA/vqn3WMWmK8GH+1L4DPm1NL7uIigTnxdyOn0+zw9L4ouHGegJmfvEWF5kccHTKw3oDKv36IBhizZqoygljyNGZAPWnEIhhW6jddPM10gx9+jWnBd6kuKY7GsfbFFdM19dBfVxLFoB/9Zhe7KLZIi6u9doTioZqBd888tlk/y0r2Y5Rk+rXbuU15NHbfzBnKsZxkYfoolYGWSEJbLz0aQoTWZNmXgOI+yxvg7sEk9sRhMH3zlKUMA62v1BeSpQZrnkI0BLZsys/2ZRFCep5SEVoNdot1SJZptK+h7EaUjNNGFu4U8NNuiazk0ZWDiyS1Lai2eG/JKcPQEs/rLJQYqUTxMXeOG9h3otnQnur6MJXLWGR7Zs5L/LjQIxx4ekPdAt4C80UDceIRhlAU1U1srJVgemuIb2j3Oz3zUu8=
+  file_glob: true
+  file: bin/**/*
+  skip_cleanup: true
+  on:
+    tags: true
+    repo: beameio/beame-windows-installer
