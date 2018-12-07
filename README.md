@@ -33,6 +33,19 @@ To do so, add the properties as `<add key="GatekeeperName" value="Beame Gatekeep
 
 Please not that all values are text fields
 
+### Installer settings
+* InstallationFolder
+
+    Installation folder to use for the nodejs, npm and gatekeeper installation e.g "c:\nodejs". Default is the current user AppData folder.
+    
+* EnableRegisterSiteOnFinish
+    
+    Enables the open the registration website in the end of the installation. Can be `true` or `false`. Default is `true`.
+    
+* RegisterSiteOnFinish
+    
+    Site that is show in the end of the installation in order to allow registration.
+
 ### Proxy settings
 
 * ProxyAddressProtocol

@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Configuration;
 using System.Security.Principal;
 using System.Linq;
 
@@ -17,7 +16,6 @@ namespace BeameWindowsInstaller
 
         private static readonly string progFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
         private static readonly string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        private static readonly string appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         
         private static readonly string nssmPath = Path.Combine(progFolder, "nssm");
         private static readonly string nssmFile = Path.Combine(nssmPath, nssmInstaller);
@@ -48,8 +46,8 @@ namespace BeameWindowsInstaller
 
         private static readonly string customGatekeeper = Helper.GetConfigurationValue("CustomGatekeeper");
         private static readonly string customGatekeeperCSS = Helper.GetConfigurationValue("CustomGatekeeperCSS");
-        
-        static readonly string windowsServiceGatekeeperName = "Beame Gatekeeper";
+
+        private static string rootFolder;
 
         enum InstallerOptions
         {
@@ -61,6 +59,18 @@ namespace BeameWindowsInstaller
         
         static void Main(string[] args)
         {
+            var installationFolder = Helper.GetConfigurationValue("InstallationFolder");
+            if (string.IsNullOrWhiteSpace(installationFolder))
+            {
+                rootFolder = Path.Combine( Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "npm");
+            }
+            else
+            {
+                rootFolder = installationFolder;
+                Directory.CreateDirectory(rootFolder);
+                Helper.SetEnv("NPM_CONFIG_PREFIX", rootFolder);
+            }
+            
             Console.WriteLine("Beame.io Windows Installer");
             Console.WriteLine("**************************");
             Console.WriteLine("Note: install dependencies before any other software");
@@ -104,6 +114,12 @@ namespace BeameWindowsInstaller
                     
                     case InstallerOptions.Dependencies:
                         InstallDeps();
+                        Console.WriteLine();
+                        Console.Write("Installer finished");
+                        Console.WriteLine();
+                        Console.WriteLine("Press a key to exit");
+                        Console.ReadLine();
+                        Environment.Exit(0);
                         break;
                     default:
                         Environment.Exit(0);
@@ -128,7 +144,7 @@ namespace BeameWindowsInstaller
                     }
 
                     Console.WriteLine();
-                    Console.WriteLine("Once the credentials are installed, start the windows service '"+ windowsServiceGatekeeperName +"' or by running 'sc.exe start \"" + windowsServiceGatekeeperName + "\"'");
+                    Console.WriteLine("Once the credentials are installed, start the windows service '"+ gatekeeperName +"' or by running 'sc.exe start \"" + gatekeeperName + "\"'");
                     Console.WriteLine();
                     Console.WriteLine("Press a key to exit");
                     Console.ReadLine();
@@ -159,7 +175,7 @@ namespace BeameWindowsInstaller
             var nodePath = Path.Combine(nodeJSPath, "node.exe");
             
 
-            var gatekeeperPath = Path.Combine(appDataFolder, @"npm\node_modules\beame-gatekeeper");
+            var gatekeeperPath = Path.Combine(rootFolder, @"node_modules\beame-gatekeeper");
 
             if (string.IsNullOrWhiteSpace(customGatekeeper))
             {
@@ -215,24 +231,26 @@ namespace BeameWindowsInstaller
                          Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js sass web_sass compile", false, @"C:\Program Files\Git\cmd", 600, gatekeeperPath);
             }
 
-            ChangeGatekeeperSettings();
+            if (!result) return false;
+
+            result = ChangeGatekeeperSettings();
             
             Console.WriteLine("--> creating windows service");
-            Helper.StartAndCheckReturn(nssmFile, "remove \"" + windowsServiceGatekeeperName + "\" confirm");
-            Helper.StartAndCheckReturn(nssmFile, "install \"" + windowsServiceGatekeeperName + "\" \"" + Path.Combine(appDataFolder, @"npm\beame-gatekeeper.cmd") + "\" server start");
+            Helper.StartAndCheckReturn(nssmFile, "remove \"" + gatekeeperName + "\" confirm");
+            Helper.StartAndCheckReturn(nssmFile, "install \"" + gatekeeperName + "\" \"" + Path.Combine(rootFolder, @"beame-gatekeeper.cmd") + "\" server start");
             
             var userName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
             Console.WriteLine("Please insert current user " +  userName + " password:");
             var password = Console.ReadLine(); 
-            Helper.StartAndCheckReturn(nssmFile, "set \"" + windowsServiceGatekeeperName + "\" ObjectName " + userName + " " + password);
-            Helper.StartAndCheckReturn(nssmFile, "set \"" + windowsServiceGatekeeperName + "\" AppDirectory \"" + appDataFolder + "\"");
-            Helper.StartAndCheckReturn(nssmFile, "set \"" + windowsServiceGatekeeperName + "\" Start SERVICE_AUTO_START");
-            Helper.StartAndCheckReturn(nssmFile, "set \"" + windowsServiceGatekeeperName + "\" Description \"Beame Gatekeeper service\"");
+            Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" ObjectName " + userName + " " + password);
+            Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" AppDirectory \"" + rootFolder + "\"");
+            Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" Start SERVICE_AUTO_START");
+            Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" Description \"Beame Gatekeeper service\"");
 
             return result;
         }
 
-        private static void ChangeGatekeeperSettings()
+        private static bool ChangeGatekeeperSettings()
         {
             var path = Path.Combine(homeFolder, @".beame_server\config\");
             var file = Path.Combine(path, "app_config.json");
@@ -240,8 +258,10 @@ namespace BeameWindowsInstaller
             // if configs dont exist, initialize them
             if (!Directory.Exists(path))
             {
-                Helper.StartAndCheckReturn(Path.Combine(appDataFolder, @"npm\beame-gatekeeper.cmd"), "server config", false, Path.Combine(progFolder, "nodejs"), 20);
+                Helper.StartAndCheckReturn(Path.Combine(rootFolder, @"beame-gatekeeper.cmd"), "server config", false, Path.Combine(progFolder, "nodejs"), 20);
             }
+
+            if (!File.Exists(file)) return false;
 
             Console.WriteLine("--> Changing settings in gatekeeper file " + file);
             var json = File.ReadAllText(file);
@@ -269,6 +289,8 @@ namespace BeameWindowsInstaller
             }
             var output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
             File.WriteAllText(file, output);
+
+            return true;
         }
 
         private static bool InstallBeameSDK()
@@ -344,8 +366,6 @@ namespace BeameWindowsInstaller
         private static bool InstallNSSM()
         {
             Console.WriteLine("Installing NSSM...");
-            var result = true;
-            
             if (!Directory.Exists(nssmPath))
             {
                 Directory.CreateDirectory(nssmPath);
@@ -360,7 +380,7 @@ namespace BeameWindowsInstaller
                 Helper.WriteResourceToFile(nssmInstaller, nssmFile);
             }
 
-            return result;
+            return true;
         }
 
         private static bool InstallNode()
@@ -386,7 +406,8 @@ namespace BeameWindowsInstaller
                     Console.WriteLine("NodeJS installation " + (result ? "suceeded" : "failed"));
 
                     Helper.AddToPath(nodeJSPath);
-                    Helper.AddToPath(Path.Combine(appDataFolder, @"npm\"));
+                    Helper.AddToPath(rootFolder);
+                    Helper.StartAndCheckReturn(npmPath, "config --global set prefix " + rootFolder);
                 }
 
                 if (result)
@@ -402,8 +423,8 @@ namespace BeameWindowsInstaller
                         
                     //run NPM upgrade
                     result = Helper.StartAndCheckReturn(npmPath, "install -g npm@latest")
-                             && Helper.StartAndCheckReturn(npmPath, "install -g node-gyp") 
-                             && Helper.StartAndCheckReturn(npmPath, "install -g --production --scripts-prepend-node-path=true --add-python-to-path='true' windows-build-tools");
+                             && Helper.StartAndCheckReturn(npmPath, "install -g node-gyp")
+                             && Helper.StartAndCheckReturn(npmPath, "install -g --debug install --production --scripts-prepend-node-path=true --add-python-to-path='true' windows-build-tools");
                 }
             }
             catch (Exception ex)
@@ -436,7 +457,7 @@ namespace BeameWindowsInstaller
                 }
                 else
                 {
-                    string tmpPath = Path.Combine(Path.GetTempPath(), openSSLInstaller);
+                    var tmpPath = Path.Combine(Path.GetTempPath(), openSSLInstaller);
                     Helper.WriteResourceToFile(openSSLInstaller, tmpPath);
 
                     Console.WriteLine("extracting files...");

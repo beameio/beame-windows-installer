@@ -12,7 +12,7 @@ namespace BeameWindowsInstaller
         public static void AddToPath(string path)
         {
             var varPath = GetEnv("Path");
-            if (varPath.Contains(path)) return;
+            if (varPath.Contains(@path)) return;
             
             varPath += @";" + @path;
             SetEnv("Path", varPath);
