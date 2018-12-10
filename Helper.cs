@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
@@ -38,7 +39,7 @@ namespace BeameWindowsInstaller
             }
         }
 
-        public static bool StartAndCheckReturn(string fileName, string arguments, bool useShellExecute = false, string addToPath = "", int timeoutSeconds = 600, string workingDir = "")
+        public static bool StartAndCheckReturn(string fileName, string arguments, string addToPath = "", string workingDir = "", Dictionary<string,string> addToEnv = null, int timeoutSeconds = 600)
         {
             try
             {
@@ -46,7 +47,7 @@ namespace BeameWindowsInstaller
                 {
                     FileName = fileName,
                     Arguments = arguments,
-                    UseShellExecute = useShellExecute,
+                    UseShellExecute = false
                 };
 
                 if (!string.IsNullOrWhiteSpace(workingDir))
@@ -54,14 +55,23 @@ namespace BeameWindowsInstaller
 
                 if (!string.IsNullOrWhiteSpace(addToPath))
                 {
-                    string envPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine);
+                    var envPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine);
                     envPath += ";" + addToPath;
                     procStartInfo.EnvironmentVariables["PATH"] = envPath;
                 }
 
-                var proc = Process.Start(procStartInfo);
-                var timedOut = !proc.WaitForExit(timeoutSeconds * 1000);
+                if (addToEnv != null)
+                {
+                    foreach (var env in addToEnv)
+                    {
+                        procStartInfo.EnvironmentVariables[env.Key] = env.Value;
+                    }
+                }
 
+                var proc = Process.Start(procStartInfo);
+                if (proc == null) return false;
+
+                var timedOut = !proc.WaitForExit(timeoutSeconds * 1000);
                 if (proc.ExitCode < 0)
                 {
                     Environment.ExitCode = proc.ExitCode;
@@ -84,8 +94,7 @@ namespace BeameWindowsInstaller
                     File.Delete(path);
                 }
             }
-            catch
-            { }
+            catch { }
         }
 
         public static string GetConfigurationValue(string property, string defvalue = "")
@@ -96,7 +105,7 @@ namespace BeameWindowsInstaller
                 {
                     return ConfigurationManager.AppSettings[property];
                 }
-                catch{}
+                catch { }
             }
             return  defvalue;
         }

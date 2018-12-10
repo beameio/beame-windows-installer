@@ -14,13 +14,14 @@ Currently they are:
 
     1. Gatekeeper
     2. BeameSDK
-    7. Dependencies
+    4. Dependencies
+    6. Uninstall
     9. Exit
  
  Typing the wanted number and pressing enter will allow the option to be executed.
  
- Option 7 installs just the dependencies, while option 1 and 2 installs the dependencies together with the described product.
- 
+ Option 4 installs just the dependencies, while option 1 and 2 installs the dependencies together with the described product. 
+  
 ### Non-interactive
  Calling the executable with the option number as argument will allow an auto-select of that option. 
 
@@ -36,7 +37,11 @@ Please not that all values are text fields
 ### Installer settings
 * InstallationFolder
 
-    Installation folder to use for the nodejs, npm and gatekeeper installation e.g "c:\nodejs". Default is the current user AppData folder.
+    Installation folder to use for the nodejs, npm and gatekeeper installation e.g "c:\nodejs". 
+    
+    Defining an installation folder will make the installation shared and the same for all users, while leaving it empty or not defined will make a multi-installation system with installation on the users AppData. 
+    
+    Default is the current user AppData folder (allowing ).
     
 * EnableRegisterSiteOnFinish
     
@@ -45,6 +50,14 @@ Please not that all values are text fields
 * RegisterSiteOnFinish
     
     Site that is show in the end of the installation in order to allow registration.
+    
+* InstallServiceAs
+    
+    User to install the service as. Can be `LocalSystem`, `LocalService`, `NetworkService` or `User`. 
+    
+    In case of `User`, the current user will be used and the password will be requested for the service installation. 
+    
+    Default is `NetworkService` 
 
 ### Proxy settings
 
