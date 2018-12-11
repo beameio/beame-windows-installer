@@ -28,7 +28,7 @@ Currently they are:
 
 ## Application Settings
 
-Under the file `app.config` installer settings can be configured.
+Under the file (`app.config` in the source code, `BeameWindowsInstaller.exe.config` in the releases) installer settings can be configured.
 
 To do so, add the properties as `<add key="GatekeeperName" value="Beame Gatekeeper"/>` inside the `<appSettings>` tag.
 
