@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Security.Principal;
 using System.Linq;
+using System.Security.AccessControl;
 
 namespace BeameWindowsInstaller
 {
@@ -78,6 +79,7 @@ namespace BeameWindowsInstaller
                 Directory.CreateDirectory(rootFolder);
                 Helper.SetEnv("NPM_CONFIG_PREFIX", rootFolder);
                 Helper.SetEnv("BEAME_GATEKEEPER_DIR", rootFolder);
+                Helper.SetEnv("BEAME_DIR", Path.Combine(rootFolder, ".beame"));
             }
             
             Console.WriteLine("Beame.io Windows Installer");
@@ -196,6 +198,7 @@ namespace BeameWindowsInstaller
             
             var gkenv = new Dictionary<string, string>();
             gkenv.Add("BEAME_GATEKEEPER_DIR", rootFolder);
+            gkenv.Add("BEAME_DIR", Path.Combine(rootFolder, ".beame"));
 
             var gatekeeperPath = Path.Combine(rootFolder, @"node_modules\beame-gatekeeper");
             if (string.IsNullOrWhiteSpace(customGatekeeper))
@@ -261,7 +264,6 @@ namespace BeameWindowsInstaller
             Helper.StartAndCheckReturn(nssmFile, "remove \"" + gatekeeperName + "\" confirm");
             Helper.StartAndCheckReturn(nssmFile, "install \"" + gatekeeperName + "\" \"" + Path.Combine(rootFolder, @"beame-gatekeeper.cmd") + "\" server start");
 
-
             if (installServiceAs.Equals("User"))
             {
                 var userName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
@@ -273,8 +275,7 @@ namespace BeameWindowsInstaller
             {
                 Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" ObjectName " + installServiceAs);
             }
-             
-            Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" AppEnvironmentExtra BEAME_GATEKEEPER_DIR=\"" + rootFolder + "\"");
+
             Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" AppDirectory \"" + rootFolder + "\"");
             Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" Start SERVICE_AUTO_START");
             Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" Description \"Beame Gatekeeper service\"");
@@ -329,6 +330,7 @@ namespace BeameWindowsInstaller
         {
             var gkenv = new Dictionary<string, string>();
             gkenv.Add("BEAME_GATEKEEPER_DIR", rootFolder);
+            gkenv.Add("BEAME_DIR", Path.Combine(rootFolder, ".beame"));
             
             var result = false;
             Console.WriteLine("Installing Beame.io SDK...");
