@@ -57,7 +57,7 @@ Please not that all values are text fields
     
     In case of `User`, the current user will be used and the password will be requested for the service installation. 
     
-    Default is `NetworkService` 
+    Default is `User` 
 
 ### Proxy settings
 
