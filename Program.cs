@@ -279,6 +279,9 @@ namespace BeameWindowsInstaller
             Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" AppDirectory \"" + rootFolder + "\"");
             Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" Start SERVICE_AUTO_START");
             Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" Description \"Beame Gatekeeper service\"");
+            
+            // activate file logging on gatekeeper
+            Helper.SetEnv("BEAME_LOG_TO_FILE", "true");
 
             return result;
         }
@@ -527,7 +530,6 @@ namespace BeameWindowsInstaller
                     //run NPM upgrade
                     result = Helper.StartAndCheckReturn(npmPath, "install -g npm@latest", "", "", nodeenv) &&
                              Helper.StartAndCheckReturn(npmPath, "install -g node-gyp", "", "", nodeenv);
-                    //Helper.StartAndCheckReturn(npmPath, "install --add-python-to-path='true' --debug install --scripts-prepend-node-path=true --production -g windows-build-tools@5.0.0", "", "", nodeenv, 3200);
                 }
             }
             catch (Exception ex)
@@ -589,10 +591,8 @@ namespace BeameWindowsInstaller
                 if (File.Exists(npmPath))
                 {
                     result = Helper.StartAndCheckReturn(npmPath, "uninstall -g beame-gatekeeper") &&
-                             Helper.StartAndCheckReturn(npmPath, "uninstall -g windows-build-tools") &&
                              Helper.StartAndCheckReturn(npmPath, "uninstall -g node-gyp");
 
-                    Directory.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".windows-build-tools"), true);
                     Directory.Delete(Path.GetTempPath(),true);
                 }
             }
