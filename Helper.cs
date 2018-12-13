@@ -42,7 +42,7 @@ namespace BeameWindowsInstaller
             }
         }
 
-        public static bool StartAndCheckReturn(string fileName, string arguments, string addToPath = "", string workingDir = "", Dictionary<string,string> addToEnv = null, int timeoutSeconds = 600)
+        public static bool StartAndCheckReturn(string fileName, string arguments, string addToPath = "", string workingDir = "", Dictionary<string,string> addToEnv = null, int timeoutSeconds = 1200)
         {
             try
             {
