@@ -110,38 +110,24 @@ namespace BeameWindowsInstaller
                 }
 
                 Enum.TryParse(selected, out InstallerOptions opt);
-                var installed = false;
+                var result = false;
                 switch(opt)
                 {
                     case InstallerOptions.Gatekeeper:
-                        InstallDeps();
-                        installed = InstallBeameGateKeeper();
+                        result = InstallDeps() && InstallBeameGateKeeper();
                         break;
 
                     case InstallerOptions.BeameSDK:
-                        InstallDeps();
-                        installed = InstallBeameSDK();
+                        result = InstallDeps() && InstallBeameSDK();
                         break;
                     
                     case InstallerOptions.Dependencies:
-                        InstallDeps();
-                        Console.WriteLine();
-                        Console.Write("Installer finished");
-                        Console.WriteLine();
-                        Console.WriteLine("Press a key to exit");
-                        Console.ReadLine();
-                        Environment.Exit(0);
+                        result = InstallDeps();
                         break;
                     case InstallerOptions.Uninstall:
                         Console.WriteLine();
                         Console.Write("This is still a beta feature, not all components and settings will be removed");
-                        var result = Uninstall();
-                        Console.WriteLine();
-                        Console.Write("Uninstall " + (result ? "finished" : "failed"));
-                        Console.WriteLine();
-                        Console.WriteLine("Press a key to exit");
-                        Console.ReadLine();
-                        Environment.Exit(0);
+                        result = Uninstall();
                         break;
                     default:
                         Environment.Exit(0);
@@ -149,11 +135,12 @@ namespace BeameWindowsInstaller
                 }
 
                 Console.WriteLine();
-                if (installed)
+                var action = opt == InstallerOptions.Uninstall ? "Uninstaller" : "Installer";
+                if (result)
                 {
-                    Console.WriteLine("== Installer finished successfully ==");
+                    Console.WriteLine("== "+ action +" finished successfully ==");
                     Console.WriteLine();
-                    if (enableRegisterSiteOnFinish)
+                    if (enableRegisterSiteOnFinish && (opt == InstallerOptions.Gatekeeper || opt == InstallerOptions.BeameSDK))
                     {
                         Process.Start(opt == InstallerOptions.Gatekeeper
                             ? registerSiteOnFinish + "/gatekeeper"
@@ -165,25 +152,26 @@ namespace BeameWindowsInstaller
                             "After receiving the instruction email please follow only the last section (\"For Windows...\")");
                     }
 
-                    Console.WriteLine();
-                    Console.WriteLine("Once the credentials are installed, start the windows service '"+ gatekeeperName +"' or by running 'sc.exe start \"" + gatekeeperName + "\"'");
-                    Console.WriteLine();
-                    Console.WriteLine("Press a key to exit");
-                    Console.ReadLine();
+                    if (opt == InstallerOptions.Gatekeeper)
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine("Once the credentials are installed, start the windows service '" +
+                                          gatekeeperName + "' or by running 'sc.exe start \"" + gatekeeperName + "\"'");
+                    }
                 }
                 else
                 {
-                    Console.Write("Installer failed");
-                    Console.WriteLine();
-                    Console.ReadLine();
+                    Console.Write("== "+ action +" failed ==");
                 }
             }
             else
             {
                 Console.WriteLine("Please run the installer with administrative rights");
-                Console.WriteLine();
-                Console.ReadLine();
             }
+
+            Console.WriteLine();
+            Console.WriteLine("Press a key to exit");
+            Console.ReadLine();
         }
 
 
@@ -199,6 +187,13 @@ namespace BeameWindowsInstaller
             var gkenv = new Dictionary<string, string>();
             gkenv.Add("BEAME_GATEKEEPER_DIR", rootFolder);
             gkenv.Add("BEAME_DIR", Path.Combine(rootFolder, ".beame"));
+            
+            if (Helper.DoesServiceExist(gatekeeperName))
+            {
+                Console.WriteLine("--> removing windows service");
+                Helper.StartAndCheckReturn(nssmFile, "stop \"" + gatekeeperName + "\"");
+                Helper.StartAndCheckReturn(nssmFile, "remove \"" + gatekeeperName + "\" confirm");
+            }
 
             var gatekeeperPath = Path.Combine(rootFolder, @"node_modules\beame-gatekeeper");
             if (string.IsNullOrWhiteSpace(customGatekeeper))
@@ -261,24 +256,26 @@ namespace BeameWindowsInstaller
             result = ChangeGatekeeperSettings(gkenv);
             
             Console.WriteLine("--> creating windows service");
-            Helper.StartAndCheckReturn(nssmFile, "remove \"" + gatekeeperName + "\" confirm");
             Helper.StartAndCheckReturn(nssmFile, "install \"" + gatekeeperName + "\" \"" + Path.Combine(rootFolder, @"beame-gatekeeper.cmd") + "\" server start");
 
+            var userName = installServiceAs.Equals("User") ? WindowsIdentity.GetCurrent().Name : installServiceAs;
             if (installServiceAs.Equals("User"))
             {
-                var userName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
                 Console.WriteLine("Please insert current user " +  userName + " password:");
                 var password = Console.ReadLine();
                 Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" ObjectName " + userName + " " + password);
             }
             else
             {
-                Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" ObjectName " + installServiceAs);
+                Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" ObjectName " + userName);
             }
 
             Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" AppDirectory \"" + rootFolder + "\"");
             Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" Start SERVICE_AUTO_START");
             Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" Description \"Beame Gatekeeper service\"");
+            
+            // set folder permissions
+            Helper.SetFolderAccessPermission(rootFolder, userName);
             
             // activate file logging on gatekeeper
             Helper.SetEnv("BEAME_LOG_TO_FILE", "true");
@@ -355,21 +352,21 @@ namespace BeameWindowsInstaller
         }
         
         #region dependencies
-        private static void InstallDeps() {
-            if (!InstallNSSM() || !InstallOpenSSL() || !InstallGit() || !InstallPython() || !InstallBuildTools() || !InstallNode())
-            {
-                Console.ReadLine();
-                Environment.Exit(Environment.ExitCode);
-            }
+        private static bool InstallDeps() {
+            if (!InstallNSSM() || !InstallOpenSSL() || !InstallGit() || !InstallPython() || !InstallBuildTools() ||
+                !InstallNode()) return false;
 
             // set env proxy
-            if (!string.IsNullOrWhiteSpace(proxyAddress)) {
+            if (!string.IsNullOrWhiteSpace(proxyAddress))
+            {
                 Console.WriteLine("--> Setting cmdline proxy");
                 Helper.SetEnv("HTTP_PROXY", proxyAddress);
                 Helper.SetEnv("HTTPS_PROXY", proxyAddress);
                 Helper.SetEnv("FTP_PROXY", proxyAddress);
                 Helper.SetEnv("NO_PROXY", proxyAddressExcludes);
             }
+
+            return true;
         }
         
         private static bool InstallGit()
@@ -468,7 +465,10 @@ namespace BeameWindowsInstaller
             { 
                 Helper.WriteResourceToFile(buildToolsInstaller, exePath);
                 // options available here: https://docs.microsoft.com/en-us/visualstudio/install/workload-component-id-vs-build-tools?view=vs-2017
-                result = Helper.StartAndCheckReturn(exePath, "--add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.Windows81SDK --add Microsoft.VisualStudio.Component.VC.140 --includeRecommended --norestart --noUpdateInstaller --passive --wait", "", "", null, 3200);
+                var parameters = "--add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.Windows81SDK --add Microsoft.VisualStudio.Component.VC.140 --includeRecommended --norestart --noUpdateInstaller --passive --wait";
+                result = Helper.StartAndCheckReturn(exePath, parameters, "", "", null, 3200)
+                         // if installation fails, try update
+                         || Helper.StartAndCheckReturn(exePath, "update " + parameters, "", "", null, 3200);
 
                 Helper.SetEnv("GYP_MSVS_VERSION", "2017");
                 Console.WriteLine("Microsoft Build Tools installation " + (result ? "suceeded" : "failed"));

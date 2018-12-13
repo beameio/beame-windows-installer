@@ -5,6 +5,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.AccessControl;
+using System.Security.Principal;
+using System.ServiceProcess;
 
 namespace BeameWindowsInstaller
 {
@@ -121,6 +124,46 @@ namespace BeameWindowsInstaller
                 catch{}
             }
             return  defvalue;
+        }
+        
+        public static bool DoesServiceExist(string serviceName, string machineName = "localhost")
+        {
+            var services = ServiceController.GetServices(machineName);
+            return services.Any(s => s.ServiceName.Equals(serviceName));
+        }
+        
+        public static void SetFolderAccessPermission(string directoryPath,string username)
+        {
+            var dirSecurity = Directory.GetAccessControl(directoryPath);
+
+            //remove any inherited access
+            dirSecurity.SetAccessRuleProtection(true, false);
+            
+            //get and remove any special user access
+            var rules = dirSecurity.GetAccessRules(true, true, typeof(NTAccount));
+            foreach (FileSystemAccessRule rule in rules)
+                dirSecurity.RemoveAccessRule(rule);
+           
+            // add new access rules
+            if (username != WindowsIdentity.GetCurrent().Name)
+            {
+                dirSecurity.AddAccessRule(new FileSystemAccessRule(username,
+                                                                FileSystemRights.FullControl,
+                                                                InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                                                                PropagationFlags.None, 
+                                                                AccessControlType.Allow));
+            }
+
+            dirSecurity.AddAccessRule(new FileSystemAccessRule(WindowsIdentity.GetCurrent().Name,
+                                                                FileSystemRights.FullControl,
+                                                                InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                                                                PropagationFlags.None, 
+                                                                AccessControlType.Allow));
+            
+            var ownerAccount = new NTAccount(WindowsIdentity.GetCurrent().Name);
+            dirSecurity.SetOwner(ownerAccount);
+
+            Directory.SetAccessControl(directoryPath, dirSecurity);
         }
     }
 }
