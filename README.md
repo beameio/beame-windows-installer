@@ -1,4 +1,6 @@
-# beame-windows-installer  [![Build Status](https://travis-ci.org/beameio/beame-windows-installer.svg?branch=master)](https://travis-ci.org/beameio/beame-windows-installer)
+# beame-windows-installer  
+[![Build Status](https://travis-ci.org/beameio/beame-windows-installer.svg?branch=master)](https://travis-ci.org/beameio/beame-windows-installer) [![HitCount](http://hits.dwyl.io/beameio/beame-windows-installer.svg)](http://hits.dwyl.io/beameio/beame-windows-installer)
+
 The Windows Installer tools are set of commands to install all prerequisites such as NPM, OpenSSL and more before installing the main component
 
 This setup was designed to run on a windows 64 bits machine running .net framework 4.5 and was tested with windows server 2012 and 2016
