@@ -123,7 +123,7 @@ Please not that all values are text fields
 
     Configures gatekeeper option to disable the demo servers. Can be `true` or `false`. Default is `false`
 
-* AdvanceSettingsEnabled
+* AdvancedSettingsEnabled
 
     Configures gatekeeper option to show the advanced settings on the admin control panel. Can be `true` or `false`. Default is `false`
 
