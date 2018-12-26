@@ -49,7 +49,7 @@ namespace BeameWindowsInstaller
         private static readonly bool allowSignInWithCreds = Helper.GetConfigurationValue("AllowSignInWithCreds", true);
         private static readonly bool allowSignInWithUltrasound = Helper.GetConfigurationValue("AllowSignInWithUltrasound", true);
         private static readonly bool disableDemoServers = Helper.GetConfigurationValue("DisableDemoServers", false);
-        private static readonly bool advanceSettingsEnabled = Helper.GetConfigurationValue("AdvanceSettingsEnabled", false);
+        private static readonly bool advancedSettingsEnabled = Helper.GetConfigurationValue("AdvancedSettingsEnabled", false);
         private static readonly bool showZendeskSupport = Helper.GetConfigurationValue("ShowZendeskSupport", false);
 
         private static readonly string customGatekeeper = Helper.GetConfigurationValue("CustomGatekeeper");
@@ -310,7 +310,7 @@ namespace BeameWindowsInstaller
             jsonObj["AllowSignInWithCreds"] = allowSignInWithCreds;
             jsonObj["AllowSignInWithUltrasound"] = allowSignInWithUltrasound;
             jsonObj["DisableDemoServers"] = disableDemoServers;
-            jsonObj["AdvanceSettingsEnabled"] = advanceSettingsEnabled;
+            jsonObj["AdvancedSettingsEnabled"] = advancedSettingsEnabled;
             jsonObj["ShowZendeskSupport"] = showZendeskSupport;
             
             if (!string.IsNullOrWhiteSpace(proxyAddress))
