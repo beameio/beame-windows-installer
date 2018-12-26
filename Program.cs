@@ -172,6 +172,7 @@ namespace BeameWindowsInstaller
             Console.WriteLine();
             Console.WriteLine("Press a key to exit");
             Console.ReadLine();
+            Environment.Exit(0);
         }
 
 
