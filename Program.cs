@@ -5,7 +5,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Security.Principal;
 using System.Linq;
-using System.Security.AccessControl;
 
 namespace BeameWindowsInstaller
 {
@@ -65,9 +64,51 @@ namespace BeameWindowsInstaller
             Uninstall = 6,
             Exit = 9
         }
+        enum SystemErrorCodes
+        {
+            ERROR_SUCCESS = 0,
+            ERROR_INVALID_FUNCTION = 1,
+            ERROR_FILE_NOT_FOUND = 2,
+            ERROR_PATH_NOT_FOUND = 3,
+            ERROR_ACCESS_DENIED = 5,
+            ERROR_INVALID_HANDLE = 6,
+            ERROR_NOT_ENOUGH_MEMORY = 8,
+            ERROR_BAD_ENVIRONMENT = 10,
+            ERROR_BAD_FORMAT = 11,
+            ERROR_INVALID_ACCESS = 12,
+            ERROR_INVALID_DATA = 13,
+            ERROR_INSTALL_SERVICE_FAILURE = 1601,
+            ERROR_INSTALL_USEREXIT = 1602,
+            ERROR_INSTALL_FAILURE = 1603,
+            ERROR_INSTALL_SUSPEND = 1604
+        }
         
+        
+
         static void Main(string[] args)
         {
+            var interactive = args.Length == 0;
+
+            Console.WriteLine("Beame.io Windows Installer");
+            Console.WriteLine("**************************");
+            Console.WriteLine();
+            
+            Console.WriteLine("->  interactive mode: " + interactive);
+            
+            var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            if (!principal.IsInRole(WindowsBuiltInRole.Administrator))
+                Exit("Please run the installer with administrative rights", interactive, SystemErrorCodes.ERROR_ACCESS_DENIED);
+
+            Console.WriteLine("->  administrator rights: True");
+
+            var preChecks = PreChecks();
+            if(preChecks != 0) 
+                Exit("Pre-Checks failed!", interactive, preChecks);
+
+            Console.WriteLine("->  pre-checks: Success");
+
+            
             var installationFolder = Helper.GetConfigurationValue("InstallationFolder");
             if (string.IsNullOrWhiteSpace(installationFolder))
             {
@@ -81,100 +122,122 @@ namespace BeameWindowsInstaller
                 Helper.SetEnv("BEAME_GATEKEEPER_DIR", rootFolder);
                 Helper.SetEnv("BEAME_DIR", Path.Combine(rootFolder, ".beame"));
             }
-            
-            Console.WriteLine("Beame.io Windows Installer");
-            Console.WriteLine("**************************");
-            Console.WriteLine("Note: install dependencies before any other software");
+
+            Console.WriteLine("->  installation folder: " + rootFolder);
+            Console.WriteLine("->  third-party installation folder: " + progFolder);
+
             Console.WriteLine();
-
-            var identity = WindowsIdentity.GetCurrent();
-            var principal = new WindowsPrincipal(identity);
-            if (principal.IsInRole(WindowsBuiltInRole.Administrator))
+            
+            string selected;
+            if (interactive)
             {
-                string selected;
-                if (args.Length > 0)
+                Console.WriteLine();
+                Console.WriteLine("Available Options:");
+                foreach (InstallerOptions option in Enum.GetValues(typeof(InstallerOptions)))
                 {
-                    selected = args[0];
-                }
-                else
-                {
-                    Console.WriteLine("Using Programs file folder: " + progFolder);
-                    Console.WriteLine();
-                    foreach (InstallerOptions option in Enum.GetValues(typeof(InstallerOptions)))
-                    {
-                        Console.WriteLine("{0}. {1}", (int)option, option);
-                    }
-                    Console.WriteLine("");
-                    Console.WriteLine("Please enter option:");
-                    selected = Console.ReadLine();
-                }
-
-                Enum.TryParse(selected, out InstallerOptions opt);
-                var result = false;
-                switch(opt)
-                {
-                    case InstallerOptions.Gatekeeper:
-                        result = InstallDeps() && InstallBeameGateKeeper();
-                        break;
-
-                    case InstallerOptions.BeameSDK:
-                        result = InstallDeps() && InstallBeameSDK();
-                        break;
-                    
-                    case InstallerOptions.Dependencies:
-                        result = InstallDeps();
-                        break;
-                    case InstallerOptions.Uninstall:
-                        Console.WriteLine();
-                        Console.Write("This is still a beta feature, not all components and settings will be removed");
-                        result = Uninstall();
-                        break;
-                    default:
-                        Environment.Exit(0);
-                        break;
+                    Console.WriteLine("{0}. {1}", (int) option, option);
                 }
 
                 Console.WriteLine();
-                var action = opt == InstallerOptions.Uninstall ? "Uninstaller" : "Installer";
-                if (result)
-                {
-                    Console.WriteLine("== "+ action +" finished successfully ==");
-                    Console.WriteLine();
-                    if (enableRegisterSiteOnFinish && (opt == InstallerOptions.Gatekeeper || opt == InstallerOptions.BeameSDK))
-                    {
-                        Process.Start(opt == InstallerOptions.Gatekeeper
-                            ? registerSiteOnFinish + "/gatekeeper"
-                            : registerSiteOnFinish);
-                        Console.WriteLine();
-                        Console.WriteLine(
-                            "Please fill the name and email in the registration form of the opened webpage");
-                        Console.WriteLine(
-                            "After receiving the instruction email please follow only the last section (\"For Windows...\")");
-                    }
-
-                    if (opt == InstallerOptions.Gatekeeper)
-                    {
-                        Console.WriteLine();
-                        Console.WriteLine("Once the credentials are installed, start the windows service '" +
-                                          gatekeeperName + "' or by running 'sc.exe start \"" + gatekeeperName + "\"'");
-                    }
-                }
-                else
-                {
-                    Console.Write("== "+ action +" failed ==");
-                }
+                Console.WriteLine("Please enter option number:");
+                selected = Console.ReadLine();
+                Console.WriteLine();
             }
             else
             {
-                Console.WriteLine("Please run the installer with administrative rights");
+                selected = args[0];
+            }
+
+            Enum.TryParse(selected, out InstallerOptions opt);
+            var result = false;
+            switch(opt)
+            {
+                case InstallerOptions.Gatekeeper:
+                    result = InstallDeps() && InstallBeameGateKeeper();
+                    break;
+                
+                case InstallerOptions.BeameSDK:
+                    result = InstallDeps() && InstallBeameSDK();
+                    break;
+    
+                case InstallerOptions.Dependencies:
+                    result = InstallDeps();
+                    break;
+                case InstallerOptions.Uninstall:
+                    Console.WriteLine();
+                    Console.Write("This is still a beta feature, not all components and settings will be removed");
+                    result = Uninstall();
+                    break;
+                default:
+                    Exit("No action required, exiting...", interactive);
+                    break;
             }
 
             Console.WriteLine();
-            Console.WriteLine("Press a key to exit");
-            Console.ReadLine();
-            Environment.Exit(0);
+            var action = opt == InstallerOptions.Uninstall ? "Uninstaller" : "Installer";
+            if (result)
+            {
+                if (enableRegisterSiteOnFinish &&
+                    (opt == InstallerOptions.Gatekeeper || opt == InstallerOptions.BeameSDK))
+                {
+                    Process.Start(opt == InstallerOptions.Gatekeeper
+                        ? registerSiteOnFinish + "/gatekeeper"
+                        : registerSiteOnFinish);
+                    Console.WriteLine();
+                    Console.WriteLine(
+                        "Please fill the name and email in the registration form of the opened webpage");
+                    Console.WriteLine(
+                        "After receiving the instruction email please follow only the last section (\"For Windows...\")");
+                }
+
+                if (opt == InstallerOptions.Gatekeeper)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Once the credentials are installed, start the windows service '" +
+                                      gatekeeperName + "' or by running 'sc.exe start \"" + gatekeeperName + "\"'");
+                }
+                
+                Exit("== " + action + " finished successfully ==", interactive);
+            }
+            else
+            {
+                Exit("== " + action + " failed ==", interactive, SystemErrorCodes.ERROR_INSTALL_FAILURE);
+            }
+            
         }
 
+        private static void Exit(string message, bool interactive, SystemErrorCodes exitCode = SystemErrorCodes.ERROR_SUCCESS)
+        {
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine(message);
+            Console.WriteLine();                    
+            if (interactive)
+            {
+                Console.WriteLine("Press a key to exit");
+                Console.ReadLine();
+            }
+            Environment.Exit((int)exitCode);
+        }
+
+        private static SystemErrorCodes PreChecks()
+        {
+            if (!string.IsNullOrWhiteSpace(customGatekeeper) && !File.Exists(customGatekeeper))
+            {
+                Console.WriteLine("Custom Gatekeeper file defined as '" + customGatekeeper + "' but not present in filesystem");
+                return SystemErrorCodes.ERROR_FILE_NOT_FOUND;
+            }
+            if (!string.IsNullOrWhiteSpace(customGatekeeperCSS) && !File.Exists(customGatekeeperCSS))
+            {
+                Console.WriteLine("Custom Gatekeeper CSS file defined as '" + customGatekeeperCSS + "' but not present in filesystem");
+                return SystemErrorCodes.ERROR_FILE_NOT_FOUND;
+            }
+             
+            // TODO add more
+            
+            
+            return SystemErrorCodes.ERROR_SUCCESS;
+        }
 
         private static bool InstallBeameGateKeeper()
         {
