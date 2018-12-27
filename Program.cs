@@ -394,10 +394,10 @@ namespace BeameWindowsInstaller
                 Console.WriteLine("--> Registering token");
                 Helper.StartAndCheckReturn(Path.Combine(rootFolder, @"beame-gatekeeper.cmd"), "creds getCreds --regToken '" + token + "'",
                     Path.Combine(progFolder, "nodejs"), "", gkenv);
-
-                Console.WriteLine("--> Restarting service");
-                Helper.StartAndCheckReturn(nssmFile, "restart \"" + gatekeeperName + "\"");
             }
+            
+            Console.WriteLine("--> Restarting service");
+            Helper.StartAndCheckReturn(nssmFile, "restart \"" + gatekeeperName + "\"");
 
             return result;
         }
