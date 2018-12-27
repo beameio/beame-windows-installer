@@ -45,14 +45,16 @@ Please not that all values are text fields
     
     Default is the current user AppData folder (allowing ).
     
-* EnableRegisterSiteOnFinish
-    
-    Enables the open the registration website in the end of the installation. Can be `true` or `false`. Default is `true`.
-    
+* EnableRegistrationTokenRequest
+
+    Enables the request of the registration token during the installation for beame-gatekeeper or beame-sdk. Can be `true` or `false`. Default is `false`. Enabling this setting, automatically disables the EnableRegisterSiteOnFinish
+ 
 * RegisterSiteOnFinish
     
     Site that is show in the end of the installation in order to allow registration.
-    
+    RegisterSiteOnFinish value needs to finish with no "/" since it'll be appended with "/gatekeeper" in case of gatekeeper installation.
+    If empty or if EnableRegistrationTokenRequest is activated, it'll not be used
+
 * InstallServiceAs
     
     User to install the service as. Can be `LocalSystem`, `LocalService`, `NetworkService` or `User`. 
@@ -87,6 +89,9 @@ Please not that all values are text fields
     e.g: `iep9bs1p7cj3cmit.tl5h1ipgobrdqsj6.v1.p.beameio.net`
     
 ### Gatekeeper settings
+* VersionToInstall
+    
+    Version of the beame-gatekeeper or beame-sdk to install. Default is `latest`
 
 * GatekeeperName
 

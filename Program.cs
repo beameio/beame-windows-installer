@@ -27,7 +27,7 @@ namespace BeameWindowsInstaller
         private static readonly string nssmFile = Path.Combine(nssmPath, nssmInstaller);
         
         private static readonly string registerSiteOnFinish = Helper.GetConfigurationValue("RegisterSiteOnFinish");
-        private static readonly bool enableRegisterSiteOnFinish = Helper.GetConfigurationValue("EnableRegisterSiteOnFinish", true);
+        private static readonly bool enableRegistrationTokenRequest = Helper.GetConfigurationValue("EnableRegistrationTokenRequest", false);
         private static readonly string installServiceAs = Helper.GetConfigurationValue("InstallServiceAs", "NetworkService");
         
         private static readonly string proxyAddressProtocol = Helper.GetConfigurationValue("ProxyAddressProtocol");
@@ -39,6 +39,7 @@ namespace BeameWindowsInstaller
             ? "" 
             : proxyAddressProtocol + "://" +  proxyAddressFqdn + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort);
 
+        private static readonly string versionToInstall = Helper.GetConfigurationValue("VersionToInstall", "latest");
         private static readonly string gatekeeperName = Helper.GetConfigurationValue("GatekeeperName", "Beame Gatekeeper");
         private static readonly string gatekeeperMode = Helper.GetConfigurationValue("GatekeeperMode", "Gatekeeper");
         private static readonly bool encryptUserData = Helper.GetConfigurationValue("EncryptUserData", true);
@@ -94,6 +95,9 @@ namespace BeameWindowsInstaller
             Console.WriteLine();
             
             Console.WriteLine("->  interactive mode: " + interactive);
+            Console.WriteLine("->  request registration token: " + enableRegistrationTokenRequest);
+            if(!enableRegistrationTokenRequest)
+                Console.WriteLine("->  show registration page on finish: " + registerSiteOnFinish);
             
             var identity = WindowsIdentity.GetCurrent();
             var principal = new WindowsPrincipal(identity);
@@ -147,17 +151,22 @@ namespace BeameWindowsInstaller
             {
                 selected = args[0];
             }
-
             Enum.TryParse(selected, out InstallerOptions opt);
             var result = false;
+            var token = args.Length > 1 && enableRegistrationTokenRequest ? args[1] : "";
+          
             switch(opt)
             {
                 case InstallerOptions.Gatekeeper:
-                    result = InstallDeps() && InstallBeameGateKeeper();
+                    if (enableRegistrationTokenRequest)
+                        token = requestRegistrationToken(token);
+                    result = InstallDeps() && InstallBeameGateKeeper(token);
                     break;
                 
                 case InstallerOptions.BeameSDK:
-                    result = InstallDeps() && InstallBeameSDK();
+                    if (enableRegistrationTokenRequest)
+                        token = requestRegistrationToken(token);
+                    result = InstallDeps() && InstallBeameSDK(token);
                     break;
     
                 case InstallerOptions.Dependencies:
@@ -177,7 +186,7 @@ namespace BeameWindowsInstaller
             var action = opt == InstallerOptions.Uninstall ? "Uninstaller" : "Installer";
             if (result)
             {
-                if (enableRegisterSiteOnFinish &&
+                if (!string.IsNullOrWhiteSpace(registerSiteOnFinish) && !enableRegistrationTokenRequest &&
                     (opt == InstallerOptions.Gatekeeper || opt == InstallerOptions.BeameSDK))
                 {
                     Process.Start(opt == InstallerOptions.Gatekeeper
@@ -190,7 +199,7 @@ namespace BeameWindowsInstaller
                         "After receiving the instruction email please follow only the last section (\"For Windows...\")");
                 }
 
-                if (opt == InstallerOptions.Gatekeeper)
+                if (opt == InstallerOptions.Gatekeeper && !enableRegistrationTokenRequest)
                 {
                     Console.WriteLine();
                     Console.WriteLine("Once the credentials are installed, start the windows service '" +
@@ -204,6 +213,40 @@ namespace BeameWindowsInstaller
                 Exit("== " + action + " failed ==", interactive, SystemErrorCodes.ERROR_INSTALL_FAILURE);
             }
             
+        }
+
+        private static string requestRegistrationToken(string token)
+        {
+            var validToken = false;
+
+            while (!validToken)
+            {
+                while (string.IsNullOrWhiteSpace(token))
+                {
+                    // extend readline size
+                    Console.SetIn(new StreamReader(Console.OpenStandardInput(2048)));
+                    
+                    Console.WriteLine();
+                    Console.WriteLine("Please enter registration token:");
+                    token = Console.ReadLine()?.Trim();
+                    Console.WriteLine();
+                }
+
+                try
+                {
+                    var data = System.Convert.FromBase64String(token);
+                    var base64Decoded = System.Text.Encoding.ASCII.GetString(data);
+                    validToken = base64Decoded.Contains("authToken");
+                    Console.WriteLine("decoded token is: " + base64Decoded);
+                }
+                catch
+                {
+                    Console.WriteLine("Inserted token is not valid...");
+                    token = "";    
+                }
+            }
+
+            return token;
         }
 
         private static void Exit(string message, bool interactive, SystemErrorCodes exitCode = SystemErrorCodes.ERROR_SUCCESS)
@@ -239,7 +282,7 @@ namespace BeameWindowsInstaller
             return SystemErrorCodes.ERROR_SUCCESS;
         }
 
-        private static bool InstallBeameGateKeeper()
+        private static bool InstallBeameGateKeeper(string token)
         {
             var result = false;
 
@@ -265,7 +308,7 @@ namespace BeameWindowsInstaller
                 try
                 {
                     //add GIT to path before starting this installation, in case GIT was just recently installed
-                    result = Helper.StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", @"C:\Program Files\Git\cmd", "", gkenv);
+                    result = Helper.StartAndCheckReturn(npmPath, "install -g beame-gatekeeper@"+versionToInstall, @"C:\Program Files\Git\cmd", "", gkenv);
                     Console.WriteLine("Beame.io Gatekeeper installation " + (result ? "suceeded" : "failed"));
                 }
                 catch (Exception ex)
@@ -291,7 +334,7 @@ namespace BeameWindowsInstaller
                 }
 
                 ZipFile.ExtractToDirectory(customGatekeeper, customGatekeeperFolder);
-                result = Helper.StartAndCheckReturn(npmPath, "install -g beame-gatekeeper", @"C:\Program Files\Git\cmd", progFolder, gkenv);
+                result = Helper.StartAndCheckReturn(npmPath, "install -g beame-gatekeeper@", @"C:\Program Files\Git\cmd", progFolder, gkenv);
             }
 
             if (!string.IsNullOrWhiteSpace(customGatekeeperCSS))
@@ -343,6 +386,18 @@ namespace BeameWindowsInstaller
             
             // activate file logging on gatekeeper
             Helper.SetEnv("BEAME_LOG_TO_FILE", "true");
+            
+            
+            // automatic register
+            if (enableRegistrationTokenRequest) 
+            {
+                Console.WriteLine("--> Registering token");
+                Helper.StartAndCheckReturn(Path.Combine(rootFolder, @"beame-gatekeeper.cmd"), "creds getCreds --regToken '" + token + "'",
+                    Path.Combine(progFolder, "nodejs"), "", gkenv);
+
+                Console.WriteLine("--> Restarting service");
+                Helper.StartAndCheckReturn(nssmFile, "restart \"" + gatekeeperName + "\"");
+            }
 
             return result;
         }
@@ -390,7 +445,7 @@ namespace BeameWindowsInstaller
             return true;
         }
 
-        private static bool InstallBeameSDK()
+        private static bool InstallBeameSDK(string token)
         {
             var gkenv = new Dictionary<string, string>();
             gkenv.Add("BEAME_GATEKEEPER_DIR", rootFolder);
@@ -404,8 +459,16 @@ namespace BeameWindowsInstaller
             try
             {
                 //add GIT to path before starting this installation, in case GIT was just recently installed
-                result = Helper.StartAndCheckReturn(npmPath, "install -g beame-sdk", @"C:\Program Files\Git\cmd", "", gkenv);
+                result = Helper.StartAndCheckReturn(npmPath, "install -g beame-sdk@"+versionToInstall, @"C:\Program Files\Git\cmd", "", gkenv);
                 Console.WriteLine("Beame.io SDK installation " + (result ? "suceeded" : "failed"));
+                
+                // automatic register
+                if (enableRegistrationTokenRequest) 
+                {
+                    Console.WriteLine("--> Registering token");
+                    Helper.StartAndCheckReturn(Path.Combine(rootFolder, @"beame.cmd"), "creds getCreds --regToken '" + token + "' --authSrvFqdn ypxf72akb6onjvrq.ohkv8odznwh5jpwm.v1.p.beameio.net",
+                        Path.Combine(progFolder, "nodejs"), "", gkenv);
+                }
             }
             catch (Exception ex)
             {
