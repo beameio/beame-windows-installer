@@ -132,6 +132,12 @@ namespace BeameWindowsInstaller
             return services.Any(s => s.ServiceName.Equals(serviceName));
         }
         
+        public static void StopService(string serviceName, string machineName = "localhost")
+        {
+            var services = ServiceController.GetServices(machineName);
+            services.FirstOrDefault(s => s.ServiceName.Equals(serviceName) && s.Status != ServiceControllerStatus.Stopped)?.Stop();
+        }
+        
         public static void SetFolderAccessPermission(string directoryPath,string username)
         {
             var dirSecurity = Directory.GetAccessControl(directoryPath);

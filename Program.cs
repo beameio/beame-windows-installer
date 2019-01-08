@@ -298,7 +298,7 @@ namespace BeameWindowsInstaller
             if (Helper.DoesServiceExist(gatekeeperName))
             {
                 Console.WriteLine("--> removing windows service");
-                Helper.StartAndCheckReturn(nssmFile, "stop \"" + gatekeeperName + "\"");
+                Helper.StopService(gatekeeperName);
                 Helper.StartAndCheckReturn(nssmFile, "remove \"" + gatekeeperName + "\" confirm");
             }
 
