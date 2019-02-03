@@ -257,7 +257,7 @@ namespace BeameWindowsInstaller
             Console.WriteLine();                    
             if (interactive)
             {
-                Console.WriteLine("Press a key to exit");
+                Console.WriteLine("Press a key to exit or close the application window");
                 Console.ReadLine();
             }
             Environment.Exit((int)exitCode);
