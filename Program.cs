@@ -28,6 +28,8 @@ namespace BeameWindowsInstaller
         
         private static readonly string registerSiteOnFinish = Helper.GetConfigurationValue("RegisterSiteOnFinish");
         private static readonly bool enableRegistrationTokenRequest = Helper.GetConfigurationValue("EnableRegistrationTokenRequest", false);
+        private static readonly bool disableInstallDependencies = Helper.GetConfigurationValue("DisableInstallDependencies", false);
+        
         private static readonly string installServiceAs = Helper.GetConfigurationValue("InstallServiceAs", "NetworkService");
         
         private static readonly string proxyAddressProtocol = Helper.GetConfigurationValue("ProxyAddressProtocol");
@@ -158,15 +160,13 @@ namespace BeameWindowsInstaller
             switch(opt)
             {
                 case InstallerOptions.Gatekeeper:
-                    if (enableRegistrationTokenRequest)
-                        token = requestRegistrationToken(token);
-                    result = InstallDeps() && InstallBeameGateKeeper(token);
+                    if (enableRegistrationTokenRequest) token = requestRegistrationToken(token);
+                    result = (disableInstallDependencies || InstallDeps()) && InstallBeameGateKeeper(token);
                     break;
                 
                 case InstallerOptions.BeameSDK:
-                    if (enableRegistrationTokenRequest)
-                        token = requestRegistrationToken(token);
-                    result = InstallDeps() && InstallBeameSDK(token);
+                    if (enableRegistrationTokenRequest) token = requestRegistrationToken(token);
+                    result =  (disableInstallDependencies || InstallDeps()) && InstallBeameSDK(token);
                     break;
     
                 case InstallerOptions.Dependencies:
