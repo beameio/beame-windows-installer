@@ -44,6 +44,9 @@ namespace BeameWindowsInstaller
         private static readonly string versionToInstall = Helper.GetConfigurationValue("VersionToInstall", "latest");
         private static readonly string gatekeeperName = Helper.GetConfigurationValue("GatekeeperName", "Beame Gatekeeper");
         private static readonly string gatekeeperMode = Helper.GetConfigurationValue("GatekeeperMode", "Gatekeeper");
+        private static readonly string logToFile = Helper.GetConfigurationValue("LogToFile", "true");
+        private static readonly string logLevel = Helper.GetConfigurationValue("LogLevel", "INFO");
+        
         private static readonly bool encryptUserData = Helper.GetConfigurationValue("EncryptUserData", true);
         private static readonly bool allowDirectSignin = Helper.GetConfigurationValue("AllowDirectSignin", true);
         private static readonly bool publicRegistration = Helper.GetConfigurationValue("PublicRegistration", false);
@@ -98,6 +101,9 @@ namespace BeameWindowsInstaller
             
             Console.WriteLine("->  interactive mode: " + interactive);
             Console.WriteLine("->  request registration token: " + enableRegistrationTokenRequest);
+            if(disableInstallDependencies)
+                Console.WriteLine("->  disable dependencies installation: " + disableInstallDependencies);
+
             if(!enableRegistrationTokenRequest)
                 Console.WriteLine("->  show registration page on finish: " + registerSiteOnFinish);
             
@@ -124,7 +130,9 @@ namespace BeameWindowsInstaller
                 {"BEAME_GATEKEEPER_DIR", rootFolder},
                 {"BEAME_CDR_DIR", Path.Combine(rootFolder, ".beame_cdr")},
                 {"BEAME_DATA_FOLDER", ".beame_data"},
-                {"BEAME_SERVER_FOLDER", ".beame_server"}
+                {"BEAME_SERVER_FOLDER", ".beame_server"},
+                {"BEAME_LOG_TO_FILE", logToFile },
+                {"BEAME_LOG_LEVEL", logLevel }
             };
 
             if (!string.IsNullOrWhiteSpace(installationFolder))
@@ -363,10 +371,7 @@ namespace BeameWindowsInstaller
             
             // set folder permissions
             Helper.SetFolderAccessPermission(rootFolder, userName);
-            
-            // activate file logging on gatekeeper
-            Helper.SetEnv("BEAME_LOG_TO_FILE", "true");
-            
+           
             // automatic register
             if (enableRegistrationTokenRequest)
             {
