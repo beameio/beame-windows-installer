@@ -30,6 +30,15 @@ namespace BeameWindowsInstaller
         {
             Environment.SetEnvironmentVariable(name, value, target);
         }
+
+        public static void SetEnv(Dictionary<string, string> addToEnv, EnvironmentVariableTarget target = EnvironmentVariableTarget.Machine)
+        {
+            if (addToEnv == null) return;
+            foreach (var env in addToEnv)
+            {
+                SetEnv(env.Key, env.Value, target);
+            }
+        }
         
         public static void WriteResourceToFile(string resourceName, string fileName)
         {
