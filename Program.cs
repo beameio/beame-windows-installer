@@ -383,12 +383,11 @@ namespace BeameWindowsInstaller
                     "creds getCreds --regToken '" + token + "'",
                     Path.Combine(progFolder, "nodejs"), "", gkenv);
                 Console.WriteLine("registering token " + (result ? "succeeded" : "failed"));
-
-                Console.WriteLine("--> Starting service");
-                result = result &&  Helper.StartAndCheckReturn(nssmFile, "start \"" + gatekeeperName + "\"");
-                Console.WriteLine("service start " + (result ? "succeeded" : "failed"));
             }
 
+            Console.WriteLine("--> Starting service");
+            Helper.StartAndCheckReturn(nssmFile, "start \"" + gatekeeperName + "\"");
+            
             return result;
         }
 
