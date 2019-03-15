@@ -96,9 +96,18 @@ Please not that all values are text fields
 * GatekeeperName
 
     Name of the gatekeeper, will identify the gatekeeper in the mobile app and ui. e.g `Beame Gatekeeper`
+
 * GatekeeperMode
 
     Type of gatekeeper to install. Can be `Gatekeeper`  or  `CentralLogin`
+
+* LogToFile
+    
+    Enables the gatekeeper to log to daily log files, located under .beame/logs. Can be `true` or `false`. Default is `true` 
+
+* LogLevel
+
+    Sets the log level. Can be `DEBUG`, `INFO`, `WARN`, `ERROR` or `FATAL`. Default is `INFO`
 
 * EncryptUserData
 
@@ -135,6 +144,15 @@ Please not that all values are text fields
 * ShowZendeskSupport
 
     Configures gatekeeper option to show the zendesk support. Can be `true` or `false`. Default is `false`
+
+* CentralLoginUrl
+
+    Configures the gatekeeper central login url to use. Empty (default) means to use the beame central login urls
+    
+* LogoutToCentralLogin
+    
+    Configures the gatekeeper to logout always to the central login url instead of the gatekeeper one (page where the user stays after a logout). Can be `true` or `false`. Default is `false`
+
 
 ### Gatekeeper customization 
 

@@ -56,6 +56,9 @@ namespace BeameWindowsInstaller
         private static readonly bool disableDemoServers = Helper.GetConfigurationValue("DisableDemoServers", false);
         private static readonly bool advancedSettingsEnabled = Helper.GetConfigurationValue("AdvancedSettingsEnabled", false);
         private static readonly bool showZendeskSupport = Helper.GetConfigurationValue("ShowZendeskSupport", false);
+        
+        private static readonly string centralLoginUrl = Helper.GetConfigurationValue("CentralLoginUrl");
+        private static readonly bool logoutToCentralLogin = Helper.GetConfigurationValue("LogoutToCentralLogin", false);
 
         private static readonly string customGatekeeper = Helper.GetConfigurationValue("CustomGatekeeper");
         private static readonly string customGatekeeperCSS = Helper.GetConfigurationValue("CustomGatekeeperCSS");
@@ -418,6 +421,10 @@ namespace BeameWindowsInstaller
             jsonObj["DisableDemoServers"] = disableDemoServers;
             jsonObj["AdvancedSettingsEnabled"] = advancedSettingsEnabled;
             jsonObj["ShowZendeskSupport"] = showZendeskSupport;
+
+            if (!string.IsNullOrWhiteSpace(centralLoginUrl))
+                jsonObj["CentralLoginUrl"] = centralLoginUrl;
+            jsonObj["LogoutToCentralLogin"] = logoutToCentralLogin;
             
             if (!string.IsNullOrWhiteSpace(proxyAddress))
             {
