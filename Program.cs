@@ -48,6 +48,7 @@ namespace BeameWindowsInstaller
         private static readonly string logLevel = Helper.GetConfigurationValue("LogLevel", "INFO");
         
         private static readonly bool encryptUserData = Helper.GetConfigurationValue("EncryptUserData", true);
+        private static readonly bool allowDirectSignin = Helper.GetConfigurationValue("AllowDirectSignin", true);
         private static readonly bool publicRegistration = Helper.GetConfigurationValue("PublicRegistration", false);
         private static readonly bool registrationImageRequired = Helper.GetConfigurationValue("RegistrationImageRequired", false);
         private static readonly bool allowSignInWithCreds = Helper.GetConfigurationValue("AllowSignInWithCreds", true);
@@ -411,6 +412,7 @@ namespace BeameWindowsInstaller
             jsonObj["HtmlEnvMode"] = "Prod";
             
             jsonObj["EncryptUserData"] = encryptUserData;
+            jsonObj["AllowDirectSignin"] = allowDirectSignin;
             jsonObj["PublicRegistration"] = publicRegistration;
             jsonObj["RegistrationImageRequired"] = registrationImageRequired;
             jsonObj["AllowSignInWithCreds"] = allowSignInWithCreds;
