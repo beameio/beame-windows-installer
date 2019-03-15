@@ -113,10 +113,6 @@ Please not that all values are text fields
 
     Configures gatekeeper option to encrypt user data. Can be `true` or `false`. Default is `true` 
 
-* AllowDirectSignin
-
-    Configures gatekeeper option to allow direct login from the mobile phone (no need for a browser). Can be `true` or `false`. Default is `true` 
-
 * PublicRegistration
 
     Configures gatekeeper option to allow public user registration. Can be `true` or `false`. Default is `false`
