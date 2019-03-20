@@ -5,11 +5,18 @@ using System.IO;
 using System.IO.Compression;
 using System.Security.Principal;
 using System.Linq;
+using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 namespace BeameWindowsInstaller
 {
     static class Program
     {
+        [DllImport("wininet.dll")]
+        private static extern bool InternetSetOption(IntPtr hInternet, int dwOption, IntPtr lpBuffer, int dwBufferLength);
+        private const int INTERNET_OPTION_SETTINGS_CHANGED = 39;
+        private const int INTERNET_OPTION_REFRESH = 37;
+        
         private const string openSSLInstaller = "OpenSSL-Win64.zip";
         private const string gitInstaller = "Git-2.11.0-64-bit.exe";
         private const string nodeInstaller = "node-v8.12.0-x64.msi";
@@ -125,29 +132,14 @@ namespace BeameWindowsInstaller
 
 
             var installationFolder = Helper.GetConfigurationValue("InstallationFolder");
-            rootFolder = string.IsNullOrWhiteSpace(installationFolder) ? Path.Combine( Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "npm") : installationFolder; 
-            
-            var gkenv = new Dictionary<string, string>
-            {
-                {"BEAME_DIR", Path.Combine(rootFolder, ".beame")},
-                {"BEAME_GATEKEEPER_DIR", rootFolder},
-                {"BEAME_CDR_DIR", Path.Combine(rootFolder, ".beame_cdr")},
-                {"BEAME_DATA_FOLDER", ".beame_data"},
-                {"BEAME_SERVER_FOLDER", ".beame_server"},
-                {"BEAME_LOG_TO_FILE", logToFile },
-                {"BEAME_LOG_LEVEL", logLevel }
-            };
-
+            rootFolder = string.IsNullOrWhiteSpace(installationFolder) ? Path.Combine( Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "npm") : installationFolder;
             if (!string.IsNullOrWhiteSpace(installationFolder))
             {
                 Directory.CreateDirectory(rootFolder);
-                Helper.SetEnv("NPM_CONFIG_PREFIX", rootFolder);
-                Helper.SetEnv(gkenv);
             }
 
             Console.WriteLine("->  installation folder: " + rootFolder);
             Console.WriteLine("->  third-party installation folder: " + progFolder);
-
             Console.WriteLine();
             
             string selected;
@@ -172,17 +164,20 @@ namespace BeameWindowsInstaller
             Enum.TryParse(selected, out InstallerOptions opt);
             var result = false;
             var token = args.Length > 1 && enableRegistrationTokenRequest ? args[1] : "";
-          
+            
+            var gkEnv = SetEnvVariables();
+            SetProxy();
+            
             switch(opt)
             {
                 case InstallerOptions.Gatekeeper:
                     if (enableRegistrationTokenRequest) token = requestRegistrationToken(token);
-                    result = (disableInstallDependencies || InstallDeps()) && InstallBeameGateKeeper(token, gkenv);
+                    result = (disableInstallDependencies || InstallDeps()) && InstallBeameGateKeeper(token, gkEnv);
                     break;
                 
                 case InstallerOptions.BeameSDK:
                     if (enableRegistrationTokenRequest) token = requestRegistrationToken(token);
-                    result =  (disableInstallDependencies || InstallDeps()) && InstallBeameSDK(token, gkenv);
+                    result =  (disableInstallDependencies || InstallDeps()) && InstallBeameSDK(token, gkEnv);
                     break;
     
                 case InstallerOptions.Dependencies:
@@ -296,6 +291,46 @@ namespace BeameWindowsInstaller
             
             
             return SystemErrorCodes.ERROR_SUCCESS;
+        }
+
+        private static void SetProxy()
+        {
+            if (string.IsNullOrWhiteSpace(proxyAddress)) return;
+         
+            // set env proxy
+            Console.WriteLine("--> Setting cmdline proxy");
+            Helper.SetEnv("HTTP_PROXY", proxyAddress);
+            Helper.SetEnv("HTTPS_PROXY", proxyAddress);
+            Helper.SetEnv("FTP_PROXY", proxyAddress);
+            Helper.SetEnv("NO_PROXY", proxyAddressExcludes);
+            
+            Console.WriteLine("--> Setting system proxy");
+            var registry = Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", true);
+            registry?.SetValue("ProxyEnable", 1);
+            registry?.SetValue("ProxyServer", proxyAddressFqdn + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort));
+            registry?.SetValue("ProxyOverride", proxyAddressExcludes);
+            InternetSetOption(IntPtr.Zero, INTERNET_OPTION_SETTINGS_CHANGED, IntPtr.Zero, 0);
+            InternetSetOption(IntPtr.Zero, INTERNET_OPTION_REFRESH, IntPtr.Zero, 0);
+        }
+
+        private static Dictionary<string, string> SetEnvVariables()
+        {
+            Console.WriteLine("--> Setting environment variables");
+            var gkEnv = new Dictionary<string, string>
+            {
+                {"BEAME_DIR", Path.Combine(rootFolder, ".beame")},
+                {"BEAME_GATEKEEPER_DIR", rootFolder},
+                {"BEAME_CDR_DIR", Path.Combine(rootFolder, ".beame_cdr")},
+                {"BEAME_DATA_FOLDER", ".beame_data"},
+                {"BEAME_SERVER_FOLDER", ".beame_server"},
+                {"BEAME_LOG_TO_FILE", logToFile },
+                {"BEAME_LOG_LEVEL", logLevel }
+            };
+
+            Helper.SetEnv("NPM_CONFIG_PREFIX", rootFolder);
+            Helper.SetEnv(gkEnv);
+            
+            return gkEnv;
         }
 
         private static bool InstallBeameGateKeeper(string token, Dictionary<string, string> gkenv)
@@ -468,21 +503,10 @@ namespace BeameWindowsInstaller
         }
         
         #region dependencies
-        private static bool InstallDeps() {
-            if (!InstallNSSM() || !InstallOpenSSL() || !InstallGit() || !InstallPython() || !InstallBuildTools() ||
-                !InstallNode()) return false;
-
-            // set env proxy
-            if (!string.IsNullOrWhiteSpace(proxyAddress))
-            {
-                Console.WriteLine("--> Setting cmdline proxy");
-                Helper.SetEnv("HTTP_PROXY", proxyAddress);
-                Helper.SetEnv("HTTPS_PROXY", proxyAddress);
-                Helper.SetEnv("FTP_PROXY", proxyAddress);
-                Helper.SetEnv("NO_PROXY", proxyAddressExcludes);
-            }
-
-            return true;
+        private static bool InstallDeps()
+        {
+            return InstallNSSM() && InstallOpenSSL() && InstallGit() && InstallPython() && InstallBuildTools() &&
+                   InstallNode();
         }
         
         private static bool InstallGit()
