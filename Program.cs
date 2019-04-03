@@ -296,14 +296,23 @@ namespace BeameWindowsInstaller
         private static void SetProxy()
         {
             if (string.IsNullOrWhiteSpace(proxyAddress)) return;
-         
-            // set env proxy
-            Console.WriteLine("--> Setting cmdline proxy");
-            Helper.SetEnv("HTTP_PROXY", proxyAddress);
-            Helper.SetEnv("HTTPS_PROXY", proxyAddress);
-            Helper.SetEnv("FTP_PROXY", proxyAddress);
-            Helper.SetEnv("NO_PROXY", proxyAddressExcludes);
-            
+
+            var gitPath = Path.Combine(progFolder, "Git");
+            var gitcmd = Path.Combine(gitPath, @"cmd\git.exe");
+            if (Directory.Exists(gitPath) && File.Exists(gitcmd))
+            {
+                Console.WriteLine("--> Setting git proxy");
+                Helper.StartAndCheckReturn(gitcmd, "config --global http.proxy " + proxyAddress);
+                Helper.StartAndCheckReturn(gitcmd, "config --global https.proxy " + proxyAddress);
+            }
+
+            if (File.Exists(npmPath))
+            {
+                Console.WriteLine("--> Setting npm proxy");
+                Helper.StartAndCheckReturn(npmPath, "config set proxy " + proxyAddress);
+                Helper.StartAndCheckReturn(npmPath, "config set https-proxy " + proxyAddress);
+            }
+
             Console.WriteLine("--> Setting system proxy");
             var registry = Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", true);
             registry?.SetValue("ProxyEnable", 1);
@@ -311,6 +320,12 @@ namespace BeameWindowsInstaller
             registry?.SetValue("ProxyOverride", proxyAddressExcludes);
             InternetSetOption(IntPtr.Zero, INTERNET_OPTION_SETTINGS_CHANGED, IntPtr.Zero, 0);
             InternetSetOption(IntPtr.Zero, INTERNET_OPTION_REFRESH, IntPtr.Zero, 0);
+
+            Console.WriteLine("--> Setting cmdline proxy");
+            Helper.SetEnv("HTTP_PROXY", proxyAddress);
+            Helper.SetEnv("HTTPS_PROXY", proxyAddress);
+            Helper.SetEnv("FTP_PROXY", proxyAddress);
+            Helper.SetEnv("NO_PROXY", proxyAddressExcludes);
         }
 
         private static Dictionary<string, string> SetEnvVariables()
