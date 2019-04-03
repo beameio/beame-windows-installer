@@ -677,9 +677,8 @@ namespace BeameWindowsInstaller
                     nodeenv.Add("NPM_CONFIG_PREFIX", rootFolder);
                     nodeenv.Add("PYTHON", pythonFile);
                     //run NPM upgrade
-                    result = Helper.StartAndCheckReturn(npmPath, "cache clean","", "", nodeenv) &&
+                    result = Helper.StartAndCheckReturn(npmPath, "cache verify","", "", nodeenv) &&
                              Helper.StartAndCheckReturn(npmPath, "install -g npm@latest", "", "", nodeenv) &&
-                             Helper.StartAndCheckReturn(npmPath, "cache clean","", "", nodeenv) &&
                              Helper.StartAndCheckReturn(npmPath, "install -g node-gyp", "", "", nodeenv);
                 }
             }
