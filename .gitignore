@@ -7,9 +7,11 @@
 *.manifest
 *.user
 .vs
+.vscode
 bin
 obj
 packages
 .DS_store
 .idea
 *.csproj.DotSettings
+__MACOSX
