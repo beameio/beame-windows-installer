@@ -81,11 +81,7 @@
   <ItemGroup>
     <None Include="app.config" />
     <EmbeddedResource Include="Resources\OpenSSL-Win64.zip" />
-    <EmbeddedResource Include="Resources\node-v8.12.0-x64.msi" />
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\Git-2.11.0-64-bit.exe" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
@@ -97,7 +93,9 @@
   <ItemGroup>
     <Content Include=".travis.yml" />
     <Content Include="README.md" />
-    <EmbeddedResource Include="Resources\python-2.7.15.amd64.msi" />
+    <EmbeddedResource Include="Resources\Git-2.21.0-64-bit.exe" />
+    <EmbeddedResource Include="Resources\node-v8.15.1-x64.msi" />
+    <EmbeddedResource Include="Resources\python-2.7.16.amd64.msi" />
     <EmbeddedResource Include="Resources\vs_buildtools__1482113758.1529499231.exe" />
     <EmbeddedResource Include="Resources\nssm.exe" />
   </ItemGroup>

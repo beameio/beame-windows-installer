@@ -18,15 +18,16 @@ namespace BeameWindowsInstaller
         private const int INTERNET_OPTION_REFRESH = 37;
         
         private const string openSSLInstaller = "OpenSSL-Win64.zip";
-        private const string gitInstaller = "Git-2.11.0-64-bit.exe";
-        private const string nodeInstaller = "node-v8.12.0-x64.msi";
+        private const string gitInstaller = "Git-2.21.0-64-bit.exe";
+        private const string nodeInstaller = "node-v8.15.1-x64.msi";
         private const string nssmInstaller = "nssm.exe";
-        private const string pythonInstaller = "python-2.7.15.amd64.msi";
+        private const string pythonInstaller = "python-2.7.16.amd64.msi";
         private const string buildToolsInstaller = "vs_buildtools__1482113758.1529499231.exe";
       
         private static readonly string progFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
         private static readonly string nodeJSPath = Path.Combine(progFolder, "nodejs");
         private static readonly string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
+        private static readonly string nodePath = Path.Combine(nodeJSPath, "node.exe");
         private static readonly string pythonPath = Path.Combine(progFolder,"Python27");
         private static readonly string pythonFile = Path.Combine(pythonPath,"python.exe");
 
@@ -111,8 +112,7 @@ namespace BeameWindowsInstaller
             
             Console.WriteLine("->  interactive mode: " + interactive);
             Console.WriteLine("->  request registration token: " + enableRegistrationTokenRequest);
-            if(disableInstallDependencies)
-                Console.WriteLine("->  disable dependencies installation: " + disableInstallDependencies);
+            Console.WriteLine("->  install dependencies:" + !disableInstallDependencies);
 
             if(!enableRegistrationTokenRequest)
                 Console.WriteLine("->  show registration page on finish: " + registerSiteOnFinish);
@@ -351,11 +351,6 @@ namespace BeameWindowsInstaller
         private static bool InstallBeameGateKeeper(string token, Dictionary<string, string> gkenv)
         {
             var result = false;
-
-            var nodeJSPath = Path.Combine(progFolder, "nodejs");
-            var npmPath = Path.Combine(nodeJSPath, "npm.cmd");
-            var nodePath = Path.Combine(nodeJSPath, "node.exe");
-            
             if (Helper.DoesServiceExist(gatekeeperName))
             {
                 Console.WriteLine("--> removing windows service");
@@ -493,8 +488,6 @@ namespace BeameWindowsInstaller
             var result = false;
             Console.WriteLine("Installing Beame.io SDK...");
 
-            var nodeJSPath = Path.Combine(progFolder, "nodejs");
-            var npmPath = Path.Combine(nodeJSPath, "npm.cmd");
             try
             {
                 //add GIT to path before starting this installation, in case GIT was just recently installed
@@ -620,13 +613,14 @@ namespace BeameWindowsInstaller
             { 
                 Helper.WriteResourceToFile(buildToolsInstaller, exePath);
                 // options available here: https://docs.microsoft.com/en-us/visualstudio/install/workload-component-id-vs-build-tools?view=vs-2017
-                var parameters = "--add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.Windows81SDK --add Microsoft.VisualStudio.Component.VC.140 --includeRecommended --norestart --noUpdateInstaller --passive --wait";
+                var parameters = "--add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.Windows81SDK --add Microsoft.VisualStudio.Component.VC.140 --includeRecommended --passive --wait";
                 result = Helper.StartAndCheckReturn(exePath, parameters, "", "", null, 3200)
                          // if installation fails, try update
                          || Helper.StartAndCheckReturn(exePath, "update " + parameters, "", "", null, 3200);
 
                 Helper.SetEnv("GYP_MSVS_VERSION", "2017");
                 Console.WriteLine("Microsoft Build Tools installation " + (result ? "succeeded" : "failed"));
+                if(!result) Console.WriteLine("  -- Please restart the computer and try running the setup again --");
             }
             catch (Exception ex)
             {
@@ -683,7 +677,9 @@ namespace BeameWindowsInstaller
                     nodeenv.Add("NPM_CONFIG_PREFIX", rootFolder);
                     nodeenv.Add("PYTHON", pythonFile);
                     //run NPM upgrade
-                    result = Helper.StartAndCheckReturn(npmPath, "install -g npm@latest", "", "", nodeenv) &&
+                    result = Helper.StartAndCheckReturn(npmPath, "cache clean","", "", nodeenv) &&
+                             Helper.StartAndCheckReturn(npmPath, "install -g npm@latest", "", "", nodeenv) &&
+                             Helper.StartAndCheckReturn(npmPath, "cache clean","", "", nodeenv) &&
                              Helper.StartAndCheckReturn(npmPath, "install -g node-gyp", "", "", nodeenv);
                 }
             }
