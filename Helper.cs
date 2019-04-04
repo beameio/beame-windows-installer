@@ -40,11 +40,11 @@ namespace BeameWindowsInstaller
             }
         }
         
-        public static void WriteResourceToFile(string resourceName, string fileName)
+        public static void WriteResourceToFile(string resourceName, string targetFile)
         {
             using (var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("BeameWindowsInstaller.Resources." + resourceName))
             {
-                using (var file = new FileStream(fileName, FileMode.Create, FileAccess.Write))
+                using (var file = new FileStream(targetFile, FileMode.Create, FileAccess.Write))
                 {
                     resource?.CopyTo(file);
                 }

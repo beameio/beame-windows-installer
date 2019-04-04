@@ -514,6 +514,8 @@ namespace BeameWindowsInstaller
         #region dependencies
         private static bool InstallDeps()
         {
+            if (!Directory.Exists(Path.GetTempPath())) 
+                Directory.CreateDirectory(Path.GetTempPath());
             return InstallNSSM() && InstallOpenSSL() && InstallGit() && InstallPython() && InstallBuildTools() &&
                    InstallNode();
         }
@@ -577,7 +579,7 @@ namespace BeameWindowsInstaller
             try
             {
                 //check if python.exe exist
-                if (File.Exists(pythonPath))
+                if (File.Exists(pythonFile))
                 {
                     Console.WriteLine("Already installed...");
                 }
@@ -742,7 +744,8 @@ namespace BeameWindowsInstaller
                 if (File.Exists(npmPath))
                 {
                     result = Helper.StartAndCheckReturn(npmPath, "uninstall -g beame-gatekeeper") &&
-                             Helper.StartAndCheckReturn(npmPath, "uninstall -g node-gyp");
+                             Helper.StartAndCheckReturn(npmPath, "uninstall -g node-gyp") &&
+                             Helper.StartAndCheckReturn(npmPath, "uninstall -g beame-sdk");
 
                     Directory.Delete(Path.GetTempPath(),true);
                 }
