@@ -573,7 +573,7 @@ namespace BeameWindowsInstaller
         {
             Console.WriteLine("Installing Python...");
             var result = true;
-            var msiPath = Path.Combine(Path.GetTempPath(), "python-2.7.15.amd64.msi");            
+            var msiPath = Path.Combine(Path.GetTempPath(), pythonInstaller);            
             try
             {
                 //check if python.exe exist
