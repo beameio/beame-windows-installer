@@ -113,7 +113,11 @@ namespace BeameWindowsInstaller
             Console.WriteLine("->  interactive mode: " + interactive);
             Console.WriteLine("->  request registration token: " + enableRegistrationTokenRequest);
             Console.WriteLine("->  install dependencies:" + !disableInstallDependencies);
-
+            if(!string.IsNullOrWhiteSpace(customGatekeeper))
+                Console.WriteLine("->  install with custom gatekeeper:" + customGatekeeper);
+            if(!string.IsNullOrWhiteSpace(customGatekeeperCSS))
+                Console.WriteLine("->  install with custom gatekeeper:" + customGatekeeperCSS);
+            
             if(!enableRegistrationTokenRequest)
                 Console.WriteLine("->  show registration page on finish: " + registerSiteOnFinish);
             
@@ -140,6 +144,7 @@ namespace BeameWindowsInstaller
 
             Console.WriteLine("->  installation folder: " + rootFolder);
             Console.WriteLine("->  third-party installation folder: " + progFolder);
+            SetProxy();
             Console.WriteLine();
             
             string selected;
@@ -164,20 +169,16 @@ namespace BeameWindowsInstaller
             Enum.TryParse(selected, out InstallerOptions opt);
             var result = false;
             var token = args.Length > 1 && enableRegistrationTokenRequest ? args[1] : "";
-            
-            var gkEnv = SetEnvVariables();
-            SetProxy();
-            
             switch(opt)
             {
                 case InstallerOptions.Gatekeeper:
                     if (enableRegistrationTokenRequest) token = requestRegistrationToken(token);
-                    result = (disableInstallDependencies || InstallDeps()) && InstallBeameGateKeeper(token, gkEnv);
+                    result = (disableInstallDependencies || InstallDeps()) && InstallBeameGateKeeper(token, SetEnvVariables());
                     break;
                 
                 case InstallerOptions.BeameSDK:
                     if (enableRegistrationTokenRequest) token = requestRegistrationToken(token);
-                    result =  (disableInstallDependencies || InstallDeps()) && InstallBeameSDK(token, gkEnv);
+                    result =  (disableInstallDependencies || InstallDeps()) && InstallBeameSDK(token, SetEnvVariables());
                     break;
     
                 case InstallerOptions.Dependencies:
@@ -744,6 +745,13 @@ namespace BeameWindowsInstaller
                              Helper.StartAndCheckReturn(npmPath, "uninstall -g node-gyp");
 
                     Directory.Delete(Path.GetTempPath(),true);
+                }
+                
+                if (Helper.DoesServiceExist(gatekeeperName))
+                {
+                    Console.WriteLine("--> removing windows service");
+                    Helper.StopService(gatekeeperName);
+                    Helper.StartAndCheckReturn(nssmFile, "remove \"" + gatekeeperName + "\" confirm");
                 }
             }
             catch (Exception ex)
