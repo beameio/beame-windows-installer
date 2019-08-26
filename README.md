@@ -1,5 +1,5 @@
 # beame-windows-installer  
-[![Release](https://img.shields.io/github/release/beameio/beame-windows-installer.svg)](https://github.com/beameio/beame-windows-installer/releases) [![Build Status](https://travis-ci.org/beameio/beame-windows-installer.svg?branch=master)](https://travis-ci.org/beameio/beame-windows-installer) [![HitCount](http://hits.dwyl.io/beameio/beame-windows-installer.svg)](https://github.com/beameio/beame-windows-installer)
+[![Release](https://img.shields.io/github/release/beameio/beame-windows-installer/all.svg)](https://github.com/beameio/beame-windows-installer/releases) [![Build Status](https://travis-ci.org/beameio/beame-windows-installer.svg?branch=master)](https://travis-ci.org/beameio/beame-windows-installer) [![HitCount](http://hits.dwyl.io/beameio/beame-windows-installer.svg)](https://github.com/beameio/beame-windows-installer)
 
 The Windows Installer tools are set of commands to install all prerequisites such as NPM, OpenSSL and more before installing the main component
 
