@@ -146,8 +146,17 @@ namespace BeameWindowsInstaller
             var services = ServiceController.GetServices(machineName);
             services.FirstOrDefault(s => s.ServiceName.Equals(serviceName) && s.Status != ServiceControllerStatus.Stopped)?.Stop();
         }
-        
-        public static void SetFolderAccessPermission(string directoryPath,string username)
+
+        private static FileSystemAccessRule CreateAccessRule(string username)
+        {
+            return new FileSystemAccessRule(username,
+                            FileSystemRights.FullControl,
+                            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                            PropagationFlags.None,
+                            AccessControlType.Allow);
+        }
+
+        public static void SetFolderAccessPermission(string directoryPath, string serviceAs)
         {
             var dirSecurity = Directory.GetAccessControl(directoryPath);
 
@@ -160,21 +169,14 @@ namespace BeameWindowsInstaller
                 dirSecurity.RemoveAccessRule(rule);
            
             // add new access rules
-            if (username != WindowsIdentity.GetCurrent().Name)
+            if (serviceAs == "LocalService" || serviceAs == "NetworkService")
             {
-                dirSecurity.AddAccessRule(new FileSystemAccessRule(username,
-                                                                FileSystemRights.FullControl,
-                                                                InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
-                                                                PropagationFlags.None, 
-                                                                AccessControlType.Allow));
+                dirSecurity.AddAccessRule(CreateAccessRule(serviceAs));
             }
+            dirSecurity.AddAccessRule(CreateAccessRule(WindowsIdentity.GetCurrent().Name));
+            dirSecurity.AddAccessRule(CreateAccessRule("Administrators"));
+            dirSecurity.AddAccessRule(CreateAccessRule("System"));
 
-            dirSecurity.AddAccessRule(new FileSystemAccessRule(WindowsIdentity.GetCurrent().Name,
-                                                                FileSystemRights.FullControl,
-                                                                InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
-                                                                PropagationFlags.None, 
-                                                                AccessControlType.Allow));
-            
             var ownerAccount = new NTAccount(WindowsIdentity.GetCurrent().Name);
             dirSecurity.SetOwner(ownerAccount);
 

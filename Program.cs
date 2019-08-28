@@ -38,6 +38,7 @@ namespace BeameWindowsInstaller
         private static readonly bool enableRegistrationTokenRequest = Helper.GetConfigurationValue("EnableRegistrationTokenRequest", false);
         private static readonly bool disableInstallDependencies = Helper.GetConfigurationValue("DisableInstallDependencies", false);
         
+        private static readonly string[] installServiceAsAllowedFields = { "LocalSystem", "LocalService", "NetworkService", "User" };
         private static readonly string installServiceAs = Helper.GetConfigurationValue("InstallServiceAs", "NetworkService");
         
         private static readonly string proxyAddressProtocol = Helper.GetConfigurationValue("ProxyAddressProtocol");
@@ -112,11 +113,14 @@ namespace BeameWindowsInstaller
             
             Console.WriteLine("->  interactive mode: " + interactive);
             Console.WriteLine("->  request registration token: " + enableRegistrationTokenRequest);
-            Console.WriteLine("->  install dependencies:" + !disableInstallDependencies);
+            if(!installServiceAsAllowedFields.Contains(installServiceAs))
+                Exit("InstallServiceAs value '" + installServiceAs + "' is not allowed. Please use one of the following values: " + string.Join(", ", installServiceAsAllowedFields), interactive, SystemErrorCodes.ERROR_INVALID_DATA);
+            Console.WriteLine("->  install service as: " + installServiceAs);
+            Console.WriteLine("->  install dependencies: " + !disableInstallDependencies);
             if(!string.IsNullOrWhiteSpace(customGatekeeper))
-                Console.WriteLine("->  install with custom gatekeeper:" + customGatekeeper);
+                Console.WriteLine("->  install with custom gatekeeper: " + customGatekeeper);
             if(!string.IsNullOrWhiteSpace(customGatekeeperCSS))
-                Console.WriteLine("->  install with custom gatekeeper:" + customGatekeeperCSS);
+                Console.WriteLine("->  install with custom gatekeeper: " + customGatekeeperCSS);
             
             if(!enableRegistrationTokenRequest)
                 Console.WriteLine("->  show registration page on finish: " + registerSiteOnFinish);
@@ -401,16 +405,16 @@ namespace BeameWindowsInstaller
             
             
             Console.WriteLine("--> setting windows service preferences");
-            var userName = installServiceAs.Equals("User") ? WindowsIdentity.GetCurrent().Name : installServiceAs;
+
             if (installServiceAs.Equals("User"))
             {
-                Console.WriteLine("Please insert current user " +  userName + " password:");
+                Console.WriteLine("Please insert current user " +  WindowsIdentity.GetCurrent().Name + " password:");
                 var password = Console.ReadLine();
-                result = result && Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" ObjectName " + userName + " " + password);
+                result = result && Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" ObjectName " + WindowsIdentity.GetCurrent().Name + " " + password);
             }
             else
             {
-                result = result && Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" ObjectName " + userName);
+                result = result && Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" ObjectName " + installServiceAs + " dummy");
             }
 
             result = result && Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" AppDirectory \"" + rootFolder + "\"");
@@ -419,7 +423,7 @@ namespace BeameWindowsInstaller
             Console.WriteLine("setting windows service preferences " + (result ? "succeeded" : "failed"));
             
             // set folder permissions
-            Helper.SetFolderAccessPermission(rootFolder, userName);
+            Helper.SetFolderAccessPermission(rootFolder, installServiceAs);
            
             // automatic register
             if (enableRegistrationTokenRequest)
