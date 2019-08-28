@@ -414,7 +414,7 @@ namespace BeameWindowsInstaller
             }
             else
             {
-                result = result && Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" ObjectName " + installServiceAs + " dummy");
+                result = result && Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" ObjectName " + installServiceAs);
             }
 
             result = result && Helper.StartAndCheckReturn(nssmFile, "set \"" + gatekeeperName + "\" AppDirectory \"" + rootFolder + "\"");
