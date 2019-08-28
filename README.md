@@ -39,11 +39,9 @@ Please not that all values are text fields
 ### Installer settings
 * InstallationFolder
 
-    Installation folder to use for the nodejs, npm and gatekeeper installation e.g "c:\nodejs". 
+    Installation folder to use for the nodejs, npm and gatekeeper installation. 
     
-    Defining an installation folder will make the installation shared and the same for all users, while leaving it empty or not defined will make a multi-installation system with installation on the users AppData. 
-    
-    Default is the current user AppData folder (allowing ).
+    Default is the current system drive + beame (e.g "c:\beame").
     
 * EnableRegistrationTokenRequest
 
@@ -159,12 +157,26 @@ Please not that all values are text fields
 * CustomGatekeeper
 
     Local path to the custom gatekeeper. The file needs to be a zip with the gatekeeper folder structure.
+   
     When this property is not empty, this file will be used for the installation of the beame-gatekeeper.
     
 * CustomGatekeeperCSS
 
     Local path to the custom gatekeeper css. The file needs to be a zip with the gatekeeper folder structure.
+   
     Similar to the CustomGatekeeper setting, When this proterty is not empty, after the installation of the released gatekeeper and overriding by the customgatekeeper (if defined),  this file will override the installed gatekeeper with the contained files.
 
 If any custom gatekeeper property is defined, the npm install and gulp options are executed on the final folder.
 
+
+### Troubleshooting
+
+* Windows service not starting with "Service didn't return an error":
+    
+    Make sure the user that the service is configured to use (InstallServiceAs) has enough permission to access the InstallationFolder.
+    
+* Installer fails on Visual Studio dependency:
+   
+   Make sure internet connection is available (if using proxy, that proxy is correctly configured in the options from `Proxy settings` section)
+   
+   Restart windows (for the case some pending installation reboot is required) and try installing again

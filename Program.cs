@@ -140,12 +140,9 @@ namespace BeameWindowsInstaller
 
 
             var installationFolder = Helper.GetConfigurationValue("InstallationFolder");
-            rootFolder = string.IsNullOrWhiteSpace(installationFolder) ? Path.Combine( Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "npm") : installationFolder;
-            if (!string.IsNullOrWhiteSpace(installationFolder))
-            {
-                Directory.CreateDirectory(rootFolder);
-            }
-
+            rootFolder = string.IsNullOrWhiteSpace(installationFolder) ? Path.Combine( Path.GetPathRoot(Environment.SystemDirectory), "beame") : installationFolder;
+            Directory.CreateDirectory(rootFolder);
+            
             Console.WriteLine("->  installation folder: " + rootFolder);
             Console.WriteLine("->  third-party installation folder: " + progFolder);
             SetProxy();
@@ -389,7 +386,7 @@ namespace BeameWindowsInstaller
                 Console.WriteLine("--> Installing custom css Beame.io Gatekeeper");
                 // Make install and gulp if any custom was applied
                 result = result && 
-                         Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js sass web_sass compile", @"C:\Program Files\Git\cmd", gatekeeperPath, gkenv);
+                         Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js default", @"C:\Program Files\Git\cmd", gatekeeperPath, gkenv);
                 Console.WriteLine("custom css Beame.io Gatekeeper installation " + (result ? "succeeded" : "failed"));
             }
 
