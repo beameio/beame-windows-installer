@@ -25,9 +25,15 @@ namespace BeameWindowsInstaller
         private const string buildToolsInstaller = "vs_buildtools__1482113758.1529499231.exe";
       
         private static readonly string progFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        
+        private static readonly string gitPath = Path.Combine(progFolder, "Git");
+        private static readonly string gitCmdPath = Path.Combine(gitPath, "cmd");
+        private static readonly string gitCmdExe = Path.Combine(gitCmdPath, "git.exe");
+        
         private static readonly string nodeJSPath = Path.Combine(progFolder, "nodejs");
         private static readonly string npmPath = Path.Combine(nodeJSPath, "npm.cmd");
         private static readonly string nodePath = Path.Combine(nodeJSPath, "node.exe");
+        
         private static readonly string pythonPath = Path.Combine(progFolder,"Python27");
         private static readonly string pythonFile = Path.Combine(pythonPath,"python.exe");
 
@@ -140,7 +146,7 @@ namespace BeameWindowsInstaller
 
 
             var installationFolder = Helper.GetConfigurationValue("InstallationFolder");
-            rootFolder = string.IsNullOrWhiteSpace(installationFolder) ? Path.Combine( Path.GetPathRoot(Environment.SystemDirectory), "beame") : installationFolder;
+            rootFolder = string.IsNullOrWhiteSpace(installationFolder) ? Path.Combine( progFolder, "beame") : installationFolder;
             Directory.CreateDirectory(rootFolder);
             
             Console.WriteLine("->  installation folder: " + rootFolder);
@@ -298,14 +304,12 @@ namespace BeameWindowsInstaller
         private static void SetProxy()
         {
             if (string.IsNullOrWhiteSpace(proxyAddress)) return;
-
-            var gitPath = Path.Combine(progFolder, "Git");
-            var gitcmd = Path.Combine(gitPath, @"cmd\git.exe");
-            if (Directory.Exists(gitPath) && File.Exists(gitcmd))
+            
+            if (Directory.Exists(gitPath) && File.Exists(gitCmdExe))
             {
                 Console.WriteLine("--> Setting git proxy");
-                Helper.StartAndCheckReturn(gitcmd, "config --global http.proxy " + proxyAddress);
-                Helper.StartAndCheckReturn(gitcmd, "config --global https.proxy " + proxyAddress);
+                Helper.StartAndCheckReturn(gitCmdExe, "config --global http.proxy " + proxyAddress);
+                Helper.StartAndCheckReturn(gitCmdExe, "config --global https.proxy " + proxyAddress);
             }
 
             if (File.Exists(npmPath))
@@ -386,7 +390,7 @@ namespace BeameWindowsInstaller
                 Console.WriteLine("--> Installing custom css Beame.io Gatekeeper");
                 // Make install and gulp if any custom was applied
                 result = result && 
-                         Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js default", @"C:\Program Files\Git\cmd", gatekeeperPath, gkenv);
+                         Helper.StartAndCheckReturn(nodePath, @"node_modules\gulp\bin\gulp.js default", gitCmdPath, gatekeeperPath, gkenv);
                 Console.WriteLine("custom css Beame.io Gatekeeper installation " + (result ? "succeeded" : "failed"));
             }
 
@@ -493,7 +497,7 @@ namespace BeameWindowsInstaller
             try
             {
                 //add GIT to path before starting this installation, in case GIT was just recently installed
-                result = Helper.StartAndCheckReturn(npmPath, "install -g beame-sdk@"+versionToInstall, @"C:\Program Files\Git\cmd", "", gkenv);
+                result = Helper.StartAndCheckReturn(npmPath, "install -g beame-sdk@"+versionToInstall, gitCmdPath, "", gkenv);
                 Console.WriteLine("Beame.io SDK installation " + (result ? "succeeded" : "failed"));
                 
                 // automatic register
@@ -527,9 +531,7 @@ namespace BeameWindowsInstaller
             var result = true;
 
             //check for GIT and install it if necessary
-            var gitPath = Path.Combine(progFolder, "Git");
-            var gitcmd = Path.Combine(gitPath, @"cmd\git.exe");
-            if (!Directory.Exists(gitPath) || !File.Exists(gitcmd))
+            if (!Directory.Exists(gitPath) || !File.Exists(gitCmdExe))
             {
                 string exePath = Path.Combine(Path.GetTempPath(), gitInstaller);
                 Helper.WriteResourceToFile(gitInstaller, exePath);
@@ -546,8 +548,8 @@ namespace BeameWindowsInstaller
             // set git proxy if defined
             if (!string.IsNullOrWhiteSpace(proxyAddress))
             {
-                Helper.StartAndCheckReturn(gitcmd, "config --global http.proxy " + proxyAddress);
-                Helper.StartAndCheckReturn(gitcmd, "config --global https.proxy " + proxyAddress);
+                Helper.StartAndCheckReturn(gitCmdExe, "config --global http.proxy " + proxyAddress);
+                Helper.StartAndCheckReturn(gitCmdExe, "config --global https.proxy " + proxyAddress);
             }
             return result;
         }

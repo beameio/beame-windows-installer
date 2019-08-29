@@ -41,7 +41,7 @@ Please not that all values are text fields
 
     Installation folder to use for the nodejs, npm and gatekeeper installation. 
     
-    Default is the current system drive + beame (e.g "c:\beame").
+    Default is the current program files + beame (e.g "c:\Program Files\beame").
     
 * EnableRegistrationTokenRequest
 
