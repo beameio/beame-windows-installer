@@ -25,6 +25,7 @@ namespace BeameWindowsInstaller
         private const string buildToolsInstaller = "vs_buildtools__1482113758.1529499231.exe";
       
         private static readonly string progFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        private static readonly string rootFolder = Helper.GetConfigurationValue("InstallationFolder", Path.Combine( progFolder, "beame"));
         
         private static readonly string gitPath = Path.Combine(progFolder, "Git");
         private static readonly string gitCmdPath = Path.Combine(gitPath, "cmd");
@@ -77,8 +78,6 @@ namespace BeameWindowsInstaller
 
         private static readonly string customGatekeeper = Helper.GetConfigurationValue("CustomGatekeeper");
         private static readonly string customGatekeeperCSS = Helper.GetConfigurationValue("CustomGatekeeperCSS");
-
-        private static string rootFolder = Helper.GetConfigurationValue("InstallationFolder", Path.Combine( progFolder, "beame"));
 
         enum InstallerOptions
         {
@@ -143,8 +142,6 @@ namespace BeameWindowsInstaller
                 Exit("Pre-Checks failed!", interactive, preChecks);
 
             Console.WriteLine("->  pre-checks: Success");
-
-            Directory.CreateDirectory(rootFolder);
             Console.WriteLine("->  installation folder: " + rootFolder);
             Console.WriteLine("->  third-party installation folder: " + progFolder);
             SetProxy();
@@ -170,9 +167,10 @@ namespace BeameWindowsInstaller
                 selected = args[0];
             }
             Enum.TryParse(selected, out InstallerOptions opt);
+            Directory.CreateDirectory(rootFolder);
+            var env = SetupEnvVariables();
             var result = false;
             var token = args.Length > 1 && enableRegistrationTokenRequest ? args[1] : "";
-            var env = SetupEnvVariables();
             switch(opt)
             {
                 case InstallerOptions.Gatekeeper:
@@ -659,7 +657,7 @@ namespace BeameWindowsInstaller
 
                     Helper.AddToPath(nodeJSPath);
                     Helper.AddToPath(rootFolder);
-                    Helper.StartAndCheckReturn(npmPath, "config --global set prefix " + rootFolder);
+                    Helper.StartAndCheckReturn(npmPath, "config --global set prefix \"" + rootFolder + "\"");
                     Helper.StartAndCheckReturn(npmPath, "config --global set python \"" + pythonFile + "\"");
                     Helper.StartAndCheckReturn(npmPath, "config --global set msvs_version 2017");
                 }
