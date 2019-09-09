@@ -53,9 +53,10 @@ namespace BeameWindowsInstaller
         private static readonly string proxyAddressPort = Helper.GetConfigurationValue("ProxyAddressPort");
         private static readonly string proxyAddressExcludes = Helper.GetConfigurationValue("ProxyAddressExcludes");
         private static readonly string externalOcspServerFqdn = Helper.GetConfigurationValue("ExternalOcspServerFqdn");
-        private static readonly string proxyAddress = string.IsNullOrWhiteSpace(proxyAddressFqdn) 
-            ? "" 
-            : proxyAddressProtocol + "://" +  proxyAddressFqdn + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort);
+        private static readonly bool hasProxy = !string.IsNullOrWhiteSpace(proxyAddressFqdn);
+        private static readonly string proxyAddress = hasProxy ? proxyAddressProtocol + "://" +  proxyAddressFqdn + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort)
+                                                               : "";
+        
 
         private static readonly string versionToInstall = Helper.GetConfigurationValue("VersionToInstall", "latest");
         private static readonly string gatekeeperName = Helper.GetConfigurationValue("GatekeeperName", "Beame Gatekeeper");
@@ -144,7 +145,6 @@ namespace BeameWindowsInstaller
             Console.WriteLine("->  pre-checks: Success");
             Console.WriteLine("->  installation folder: " + rootFolder);
             Console.WriteLine("->  third-party installation folder: " + progFolder);
-            SetProxy();
             Console.WriteLine();
             
             string selected;
@@ -168,6 +168,7 @@ namespace BeameWindowsInstaller
             }
             Enum.TryParse(selected, out InstallerOptions opt);
             Directory.CreateDirectory(rootFolder);
+            SetupProxy();
             var env = SetupEnvVariables();
             var result = false;
             var token = args.Length > 1 && enableRegistrationTokenRequest ? args[1] : "";
@@ -296,37 +297,38 @@ namespace BeameWindowsInstaller
             return SystemErrorCodes.ERROR_SUCCESS;
         }
 
-        private static void SetProxy()
+        private static void SetupProxy()
         {
-            if (string.IsNullOrWhiteSpace(proxyAddress)) return;
+            var displayText = hasProxy ? "Setting" : "Removing";
+            var fqdnWPort = proxyAddressFqdn + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort); 
             
             if (Directory.Exists(gitPath) && File.Exists(gitCmdExe))
             {
-                Console.WriteLine("--> Setting git proxy");
-                Helper.StartAndCheckReturn(gitCmdExe, "config --global http.proxy " + proxyAddress);
-                Helper.StartAndCheckReturn(gitCmdExe, "config --global https.proxy " + proxyAddress);
+                Console.WriteLine("--> " + displayText + " git proxy");
+                Helper.StartAndCheckReturn(gitCmdExe, "config --global " + (hasProxy ? "http.proxy " + proxyAddress : "--unset http.proxy") );
+                Helper.StartAndCheckReturn(gitCmdExe, "config --global "+ (hasProxy ? "https.proxy " + proxyAddress : "--unset https.proxy") );
             }
 
             if (File.Exists(npmPath))
             {
-                Console.WriteLine("--> Setting npm proxy");
-                Helper.StartAndCheckReturn(npmPath, "config set proxy " + proxyAddress);
-                Helper.StartAndCheckReturn(npmPath, "config set https-proxy " + proxyAddress);
+                Console.WriteLine("--> " + displayText + " npm proxy");
+                Helper.StartAndCheckReturn(npmPath, "config " + (hasProxy ? "set proxy " + proxyAddress : "rm proxy") );
+                Helper.StartAndCheckReturn(npmPath, "config " + (hasProxy ? "set https-proxy " + proxyAddress : "rm https-proxy") );
             }
 
-            Console.WriteLine("--> Setting system proxy");
+            Console.WriteLine("--> " + displayText + " system proxy");
             var registry = Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", true);
-            registry?.SetValue("ProxyEnable", 1);
-            registry?.SetValue("ProxyServer", proxyAddressFqdn + (string.IsNullOrWhiteSpace(proxyAddressPort) ? "" : ":" + proxyAddressPort));
-            registry?.SetValue("ProxyOverride", proxyAddressExcludes);
+            registry?.SetValue("ProxyEnable", hasProxy ? 1 : 0);
+            registry?.SetValue("ProxyServer", hasProxy ? fqdnWPort : "");
+            registry?.SetValue("ProxyOverride", hasProxy ? proxyAddressExcludes : "");
             InternetSetOption(IntPtr.Zero, INTERNET_OPTION_SETTINGS_CHANGED, IntPtr.Zero, 0);
             InternetSetOption(IntPtr.Zero, INTERNET_OPTION_REFRESH, IntPtr.Zero, 0);
 
-            Console.WriteLine("--> Setting cmdline proxy");
-            Helper.SetEnv("HTTP_PROXY", proxyAddress);
-            Helper.SetEnv("HTTPS_PROXY", proxyAddress);
-            Helper.SetEnv("FTP_PROXY", proxyAddress);
-            Helper.SetEnv("NO_PROXY", proxyAddressExcludes);
+            Console.WriteLine("--> " + displayText + " cmdline proxy");
+            Helper.SetEnv("HTTP_PROXY", hasProxy ? proxyAddress : "");
+            Helper.SetEnv("HTTPS_PROXY", hasProxy ? proxyAddress : "");
+            Helper.SetEnv("FTP_PROXY", hasProxy ? proxyAddress : "");
+            Helper.SetEnv("NO_PROXY", hasProxy ? proxyAddressExcludes : "");
         }
 
         private static Dictionary<string, string> SetupEnvVariables()
@@ -353,7 +355,7 @@ namespace BeameWindowsInstaller
             var result = false;
             if (Helper.DoesServiceExist(gatekeeperName))
             {
-                Console.WriteLine("--> removing windows service");
+                Console.WriteLine("--> Removing windows service");
                 Helper.StopService(gatekeeperName);
                 Helper.StartAndCheckReturn(nssmFile, "remove \"" + gatekeeperName + "\" confirm");
             }
@@ -469,14 +471,13 @@ namespace BeameWindowsInstaller
             if (!string.IsNullOrWhiteSpace(centralLoginUrl))
                 jsonObj["CentralLoginUrl"] = centralLoginUrl;
             jsonObj["LogoutToCentralLogin"] = logoutToCentralLogin;
-            
-            if (!string.IsNullOrWhiteSpace(proxyAddress))
-            {
-                jsonObj["ProxySettings"]["host"] = proxyAddressFqdn;
-                jsonObj["ProxySettings"]["port"] = proxyAddressPort;
-                jsonObj["ProxySettings"]["excludes"] = proxyAddressExcludes;
-                jsonObj["ExternalOcspServerFqdn"] = externalOcspServerFqdn;
-            }
+
+            // proxy
+            jsonObj["ProxySettings"]["host"] = hasProxy ? proxyAddressFqdn : "";
+            jsonObj["ProxySettings"]["port"] = hasProxy ? proxyAddressPort : "";
+            jsonObj["ProxySettings"]["excludes"] = hasProxy ? proxyAddressExcludes : "";
+            jsonObj["ExternalOcspServerFqdn"] = hasProxy ? externalOcspServerFqdn : "";
+        
             var output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
             File.WriteAllText(file, output);
 
@@ -747,7 +748,7 @@ namespace BeameWindowsInstaller
                 
                 if (Helper.DoesServiceExist(gatekeeperName))
                 {
-                    Console.WriteLine("--> removing windows service");
+                    Console.WriteLine("--> Removing windows service");
                     Helper.StopService(gatekeeperName);
                     Helper.StartAndCheckReturn(nssmFile, "remove \"" + gatekeeperName + "\" confirm");
                 }
