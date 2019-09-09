@@ -111,13 +111,9 @@ namespace BeameWindowsInstaller
 
         public static string GetConfigurationValue(string property, string defvalue = "")
         {
-            if (ConfigurationManager.AppSettings.AllKeys.Any(x => x.Equals(property)))
-            {
-                try
-                {
-                    return ConfigurationManager.AppSettings[property];
-                }
-                catch { }
+            if (ConfigurationManager.AppSettings.AllKeys.Any(x => x.Equals(property)) 
+                && !string.IsNullOrWhiteSpace(ConfigurationManager.AppSettings[property])) {
+                return ConfigurationManager.AppSettings[property];
             }
             return  defvalue;
         }
