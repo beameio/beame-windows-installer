@@ -168,19 +168,21 @@ namespace BeameWindowsInstaller
             }
             Enum.TryParse(selected, out InstallerOptions opt);
             Directory.CreateDirectory(rootFolder);
+            
+            var token = args.Length > 1 && enableRegistrationTokenRequest ? args[1] : "";
+            if (enableRegistrationTokenRequest && (opt == InstallerOptions.Gatekeeper || opt == InstallerOptions.BeameSDK))
+                token = requestRegistrationToken(token);
+            
             SetupProxy();
             var env = SetupEnvVariables();
             var result = false;
-            var token = args.Length > 1 && enableRegistrationTokenRequest ? args[1] : "";
             switch(opt)
             {
                 case InstallerOptions.Gatekeeper:
-                    if (enableRegistrationTokenRequest) token = requestRegistrationToken(token);
                     result = (disableInstallDependencies || InstallDeps(env)) && InstallBeameGateKeeper(token, env);
                     break;
                 
                 case InstallerOptions.BeameSDK:
-                    if (enableRegistrationTokenRequest) token = requestRegistrationToken(token);
                     result =  (disableInstallDependencies || InstallDeps(env)) && InstallBeameSDK(token, env);
                     break;
     
@@ -239,7 +241,7 @@ namespace BeameWindowsInstaller
                 while (string.IsNullOrWhiteSpace(token))
                 {
                     // extend readline size
-                    Console.SetIn(new StreamReader(Console.OpenStandardInput(2048)));
+                    Console.SetIn(new StreamReader(Console.OpenStandardInput(2048), Console.InputEncoding, false, 2048));
                     
                     Console.WriteLine();
                     Console.WriteLine("Please enter registration token:");
