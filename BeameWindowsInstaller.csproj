@@ -95,8 +95,8 @@
     <Content Include="README.md">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="Resources\node-v10.17.0-x64.msi" />
     <EmbeddedResource Include="Resources\Git-2.21.0-64-bit.exe" />
-    <EmbeddedResource Include="Resources\node-v8.15.1-x64.msi" />
     <EmbeddedResource Include="Resources\python-2.7.16.amd64.msi" />
     <EmbeddedResource Include="Resources\vs_buildtools__1482113758.1529499231.exe" />
     <EmbeddedResource Include="Resources\nssm.exe" />

@@ -19,7 +19,7 @@ namespace BeameWindowsInstaller
         
         private const string openSSLInstaller = "OpenSSL-Win64.zip";
         private const string gitInstaller = "Git-2.21.0-64-bit.exe";
-        private const string nodeInstaller = "node-v8.15.1-x64.msi";
+        private const string nodeInstaller = "node-v10.17.0-x64.msi";
         private const string nssmInstaller = "nssm.exe";
         private const string pythonInstaller = "python-2.7.16.amd64.msi";
         private const string buildToolsInstaller = "vs_buildtools__1482113758.1529499231.exe";
