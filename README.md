@@ -1,3 +1,5 @@
+*2020-12 - The project is discontinued*
+
 # beame-windows-installer  
 [![Release](https://img.shields.io/github/v/release/beameio/beame-windows-installer.svg)](https://github.com/beameio/beame-windows-installer/releases) [![Build Status](https://travis-ci.org/beameio/beame-windows-installer.svg?branch=master)](https://travis-ci.org/beameio/beame-windows-installer) [![HitCount](http://hits.dwyl.io/beameio/beame-windows-installer.svg)](https://github.com/beameio/beame-windows-installer)
 
